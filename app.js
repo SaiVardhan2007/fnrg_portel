@@ -1278,7 +1278,11 @@ function renderContacts() {
     if (activeCampaign === "Festival Promotions" && !isAdmin() && currentUser && currentUser.festival) {
       displayName = currentUser.festival;
     }
-    titleEl.innerHTML = displayName + ' <span id="active-date" class="active-date">' + (activeDate ? "for " + activeDate : "") + '</span>';
+    if (activeCampaign === "Festival Promotions") {
+      titleEl.innerHTML = displayName + ' <span id="active-date" class="active-date"></span>';
+    } else {
+      titleEl.innerHTML = displayName + ' <span id="active-date" class="active-date">' + (activeDate ? "for " + activeDate : "") + '</span>';
+    }
   }
 
   // 1. Render Section 1: All People Data (Admin Only)

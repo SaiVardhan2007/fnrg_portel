@@ -600,12 +600,15 @@ function getFestivals() {
   var festivals = [];
   var seen = {};
   if (lastRow > 1) {
-    var values = sheet.getRange(2, 6, lastRow - 1, 1).getValues(); // Read Column F
+    var values = sheet.getRange(2, 1, lastRow - 1, 8).getValues(); // Read columns A to H
     for (var i = 0; i < values.length; i++) {
-      var name = String(values[i][0]).trim();
-      if (name !== "" && !seen.hasOwnProperty(name)) {
-        festivals.push(name);
-        seen[name] = true;
+      var role = String(values[i][2]).trim().toLowerCase();
+      if (role === "festivals") {
+        var name = String(values[i][0]).trim(); // Column A (Name)
+        if (name !== "" && !seen.hasOwnProperty(name)) {
+          festivals.push(name);
+          seen[name] = true;
+        }
       }
     }
   }
@@ -1732,24 +1735,27 @@ function getFestivalForDate(targetDate) {
     var lastRow = sheet.getLastRow();
     if (lastRow < 2) return "";
     
-    // Read F (Festival), G (From Date), H (To Date) -> columns 6, 7, 8
-    var values = sheet.getRange(2, 6, lastRow - 1, 3).getValues();
+    // Read columns A to H (1 to 8) to parse festival name from Column A and From/To Dates from Columns G & H
+    var values = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
     var checkDate = new Date(targetDate);
     checkDate.setHours(0,0,0,0);
     
     for (var i = 0; i < values.length; i++) {
-      var fest = String(values[i][0]).trim();
-      var fromVal = values[i][1];
-      var toVal = values[i][2];
-      
-      if (fest !== "" && fromVal && toVal) {
-        var fromDate = new Date(fromVal);
-        var toDate = new Date(toVal);
-        if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
-          fromDate.setHours(0,0,0,0);
-          toDate.setHours(23,59,59,999);
-          if (checkDate >= fromDate && checkDate <= toDate) {
-            return fest;
+      var role = String(values[i][2]).trim().toLowerCase();
+      if (role === "festivals") {
+        var fest = String(values[i][0]).trim(); // Column A (Name)
+        var fromVal = values[i][6]; // Column G (7)
+        var toVal = values[i][7]; // Column H (8)
+        
+        if (fest !== "" && fromVal && toVal) {
+          var fromDate = new Date(fromVal);
+          var toDate = new Date(toVal);
+          if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
+            fromDate.setHours(0,0,0,0);
+            toDate.setHours(23,59,59,999);
+            if (checkDate >= fromDate && checkDate <= toDate) {
+              return fest;
+            }
           }
         }
       }
