@@ -2565,12 +2565,10 @@ async function loadAdminFestivalData() {
     return;
   }
 
+  applyPayload(response);
   loadedFestivals = response.festivals || [];
   populateFestivalFilter();
-  populateAutoAssignUsers(response.userNames || [], response.autoAssignUsers || [], response.autoAssignUserFestivals || {});
-
-  contacts = response.contacts || [];
-  userNames = response.userNames || [];
+  populateAutoAssignUsers(userNames, response.autoAssignUsers || [], response.autoAssignUserFestivals || {});
   renderAdminFestivalContacts();
 }
 
