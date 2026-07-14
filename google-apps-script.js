@@ -35,7 +35,7 @@ var SHEET_FESTIVAL = "Special Events";
 
 var CACHE_KEY_CALLING = "calling_v10";
 var CACHE_KEY_USERS = "users_v4";
-var CACHE_KEY_SETUP = "setup_v15";
+var CACHE_KEY_SETUP = "setup_v16";
 var CACHE_KEY_VALIDATION = "validation_sig_v10";
 var CACHE_SECONDS = 60;
 
@@ -165,6 +165,46 @@ function ensureSetup() {
     var oldUsers = doc.getSheetByName("Users");
     if (oldUsers) {
       doc.deleteSheet(oldUsers);
+    }
+  } catch(e){}
+
+  // --- Rename "Thursday Calling" to "GIC Calling" if it exists ---
+  try {
+    var oldCallSheet = doc.getSheetByName("Thursday Calling");
+    var newCallSheet = doc.getSheetByName(SHEET_CALLING);
+    if (oldCallSheet) {
+      if (!newCallSheet) {
+        oldCallSheet.setName(SHEET_CALLING);
+      } else {
+        var oldLast = oldCallSheet.getLastRow();
+        var newLast = newCallSheet.getLastRow();
+        if (oldLast >= newLast) {
+          doc.deleteSheet(newCallSheet);
+          oldCallSheet.setName(SHEET_CALLING);
+        } else {
+          doc.deleteSheet(oldCallSheet);
+        }
+      }
+    }
+  } catch(e){}
+
+  // --- Rename "Festival Promotions" to "Special Events" if it exists ---
+  try {
+    var oldFestSheet = doc.getSheetByName("Festival Promotions");
+    var newFestSheet = doc.getSheetByName(SHEET_FESTIVAL);
+    if (oldFestSheet) {
+      if (!newFestSheet) {
+        oldFestSheet.setName(SHEET_FESTIVAL);
+      } else {
+        var oldLast = oldFestSheet.getLastRow();
+        var newLast = newFestSheet.getLastRow();
+        if (oldLast >= newLast) {
+          doc.deleteSheet(newFestSheet);
+          oldFestSheet.setName(SHEET_FESTIVAL);
+        } else {
+          doc.deleteSheet(oldFestSheet);
+        }
+      }
     }
   } catch(e){}
 
