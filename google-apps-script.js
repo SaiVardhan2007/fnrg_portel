@@ -1794,9 +1794,14 @@ function getFestivalForDate(targetDate) {
 }
 
 function processFormResponses() {
-  var doc = SpreadsheetApp.getActiveSpreadsheet();
-  var formSheet = doc.getSheetByName("Ratha Yatra 2026") || doc.getSheetByName("Form Responces 1") || doc.getSheetByName("Form Responses 1");
-  if (!formSheet) return;
+  var lock = LockService.getScriptLock();
+  var locked = lock.tryLock(15000);
+  if (!locked) return;
+
+  try {
+    var doc = SpreadsheetApp.getActiveSpreadsheet();
+    var formSheet = doc.getSheetByName("Ratha Yatra 2026") || doc.getSheetByName("Form Responces 1") || doc.getSheetByName("Form Responses 1");
+    if (!formSheet) return;
   
   var festivalSheet = doc.getSheetByName(SHEET_FESTIVAL);
   if (!festivalSheet) return;
@@ -1895,6 +1900,9 @@ function processFormResponses() {
     // Clear cache for Festival Promotions
     var cacheKey = CACHE_KEY_CALLING + "_" + SHEET_FESTIVAL.replace(/\s+/g, "_");
     CacheService.getScriptCache().remove(cacheKey);
+  }
+  } finally {
+    lock.releaseLock();
   }
 }
 
