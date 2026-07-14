@@ -178,8 +178,18 @@ function ensureSetup() {
     try { gicAdmin.getRange(2, 3, 1000, 1).setNumberFormat("@"); } catch(e){}
     try { gicAdmin.getRange(2, 5, 1000, 1).setNumberFormat("#"); } catch(e){}
     try { gicAdmin.getRange(2, 6, 1000, 1).setNumberFormat("#"); } catch(e){}
-    try { gicAdmin.appendRow([ADMIN_SEED.name, "fnrg", ADMIN_SEED.phone, ROLE_ADMIN, "", "", "No", "GIC"]); } catch(e){}
-    try { gicAdmin.getRange(2, 3).setValue(ADMIN_SEED.phone); } catch(e){}
+    
+    // Seed sample users
+    var seeds = [
+      ["Sai Vardhan", "saivardhan", "1111111111", ROLE_USER, "", "", "No", "GIC"],
+      ["Dushmanth", "dushmanth", "9876543211", ROLE_USER, "", "", "No", "GIC"],
+      ["Srinivas", "srinivas", "9876543212", ROLE_USER, "", "", "No", "GIC"],
+      [ADMIN_SEED.name, "fnrg", ADMIN_SEED.phone, ROLE_ADMIN, "", "", "No", "GIC"]
+    ];
+    for (var s = 0; s < seeds.length; s++) {
+      gicAdmin.appendRow(seeds[s]);
+      gicAdmin.getRange(s + 2, 3).setNumberFormat("@").setValue(seeds[s][2]);
+    }
   }
 
   // Update GIC Admin formulas (Column F = index 6)
@@ -202,8 +212,18 @@ function ensureSetup() {
     try { eventAdmin.getRange(2, 3, 1000, 1).setNumberFormat("@"); } catch(e){}
     try { eventAdmin.getRange(2, 5, 1000, 1).setNumberFormat("#"); } catch(e){}
     try { eventAdmin.getRange(2, 6, 1000, 1).setNumberFormat("#"); } catch(e){}
-    try { eventAdmin.appendRow([ADMIN_SEED.name, "fnrg", ADMIN_SEED.phone, ROLE_ADMIN, "", "", "No", ""]); } catch(e){}
-    try { eventAdmin.getRange(2, 3).setValue(ADMIN_SEED.phone); } catch(e){}
+    
+    // Seed sample users
+    var seeds = [
+      ["Sai Vardhan", "saivardhan", "1111111111", ROLE_USER, "", "", "No", "Ratha Yatra 2026"],
+      ["Dushmanth", "dushmanth", "9876543211", ROLE_USER, "", "", "No", ""],
+      ["Srinivas", "srinivas", "9876543212", ROLE_USER, "", "", "No", ""],
+      [ADMIN_SEED.name, "fnrg", ADMIN_SEED.phone, ROLE_ADMIN, "", "", "No", ""]
+    ];
+    for (var s = 0; s < seeds.length; s++) {
+      eventAdmin.appendRow(seeds[s]);
+      eventAdmin.getRange(s + 2, 3).setNumberFormat("@").setValue(seeds[s][2]);
+    }
   }
 
   // Update Event Admin formulas (Column F = index 6)
