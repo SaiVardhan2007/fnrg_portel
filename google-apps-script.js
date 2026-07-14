@@ -1843,14 +1843,14 @@ function processFormResponses() {
   var existingPhones = {};
   var fLast = festivalSheet.getLastRow();
   if (fLast > 1) {
-    var fPhones = festivalSheet.getRange(2, 2, fLast - 1, 1).getValues();
+    var fPhones = festivalSheet.getRange(2, 2, fLast - 1, 1).getDisplayValues();
     for (var j = 0; j < fPhones.length; j++) {
       existingPhones[normalizePhone(fPhones[j][0])] = true;
     }
   }
   
   // Read all form responses
-  var formValues = formSheet.getRange(2, 1, lastRow - 1, formSheet.getLastColumn()).getValues();
+  var formValues = formSheet.getRange(2, 1, lastRow - 1, formSheet.getLastColumn()).getDisplayValues();
   var copiedAny = false;
   
   for (var r = 0; r < formValues.length; r++) {
@@ -1894,6 +1894,11 @@ function processFormResponses() {
     existingPhones[phone] = true;
     copiedAny = true;
   }
+  
+  // Automatically clean up any existing duplicate rows in the sheet
+  try {
+    removeDuplicatesFromFestivalSheet(festivalSheet);
+  } catch(dupErr) {}
   
   if (copiedAny) {
     SpreadsheetApp.flush();
@@ -2049,4 +2054,33 @@ function testDriveAccess() {
   Logger.log("Testing Google Drive access...");
   var root = DriveApp.getRootFolder();
   Logger.log("Access successful! Root folder name: " + root.getName());
+}
+
+function removeDuplicatesFromFestivalSheet(sheet) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 3) return; // 1 header, 1 data row -> no duplicates possible
+  
+  var range = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn());
+  var values = range.getDisplayValues(); // Use display values to match exact phone texts
+  var seen = {};
+  var rowsToDelete = [];
+  
+  // Identify duplicates (we keep the first occurrence of each phone)
+  for (var i = 0; i < values.length; i++) {
+    var phone = normalizePhone(values[i][1]); // Column B (Phone)
+    if (phone === "" || phone.length !== 10) continue;
+    
+    if (seen.hasOwnProperty(phone)) {
+      // Duplicate found! We will delete this row.
+      // Row index in sheet is i + 2
+      rowsToDelete.push(i + 2);
+    } else {
+      seen[phone] = true;
+    }
+  }
+  
+  // Delete rows backwards to maintain indices
+  for (var d = rowsToDelete.length - 1; d >= 0; d--) {
+    sheet.deleteRow(rowsToDelete[d]);
+  }
 }
