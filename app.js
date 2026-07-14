@@ -26,6 +26,10 @@ let activeDate = "";      // name of the sheet's last date column, e.g. "Jul 11"
 let userNames = [];       // admin only: names for the Assigned To / Cultivated By dropdowns
 let userLimits = {};      // admin only: name -> call limit mapping (Thursday)
 let userFestLimits = {};  // admin only: name -> festival call limit mapping
+let userThursdayAssigned = 0; // logged in user's thursday calling assignments count
+let userFestivalAssigned = 0; // logged in user's festival promotions assignments count
+let allTCAssigned = {};   // admin only: name -> thursday assigned count mapping
+let allFPAssigned = {};   // admin only: name -> festival assigned count mapping
 let registeredUserPhones = []; // admin only: list of registered user phone numbers to avoid assigning to
 let dirtyContacts = new Set(); // set of phones with staged updates for bulk save
 let activeCampaign = "Thursday Calling"; // default active campaign
@@ -512,8 +516,20 @@ function applyPayload(data) {
   if (Array.isArray(data.userNames)) userNames = data.userNames;
   if (data.userLimits) userLimits = data.userLimits;
   if (data.userFestLimits) userFestLimits = data.userFestLimits;
+  if (data.thursdayAssigned !== undefined) userThursdayAssigned = data.thursdayAssigned;
+  if (data.festivalAssigned !== undefined) userFestivalAssigned = data.festivalAssigned;
+  if (data.allTCAssigned) allTCAssigned = data.allTCAssigned;
+  if (data.allFPAssigned) allFPAssigned = data.allFPAssigned;
   if (Array.isArray(data.userPhones)) registeredUserPhones = data.userPhones;
   if (data.settings) settings = data.settings;
+  updateHeaderStats();
+}
+
+function updateHeaderStats() {
+  const thursdayStatEl = document.getElementById("user-stat-thursday");
+  const festivalStatEl = document.getElementById("user-stat-festival");
+  if (thursdayStatEl) thursdayStatEl.textContent = userThursdayAssigned;
+  if (festivalStatEl) festivalStatEl.textContent = userFestivalAssigned;
 }
 
 // ============================================================
@@ -609,6 +625,7 @@ function showApp() {
 
   // Clear hash and push dashboard state
   window.history.replaceState({ page: "dashboard" }, "", "./");
+  updateHeaderStats();
 }
 
 function selectCampaign(name, skipPushHistory) {
@@ -2685,12 +2702,12 @@ function populateAutoAssignUsers(allUsers, selectedUsers, selectedUserFestivals)
     // Left checkbox and name label
     const label = document.createElement("label");
     label.style.display = "flex";
-    label.style.alignItems = "center";
-    label.style.gap = "8px";
+    label.style.flexDirection = "column";
+    label.style.gap = "2px";
     label.style.fontSize = "13.5px";
-    label.style.fontWeight = "600";
     label.style.cursor = "pointer";
     label.style.margin = "0";
+    label.style.flex = "1";
 
     const cb = document.createElement("input");
     cb.type = "checkbox";
@@ -2720,8 +2737,25 @@ function populateAutoAssignUsers(allUsers, selectedUsers, selectedUserFestivals)
       }
     });
 
-    label.appendChild(cb);
-    label.appendChild(document.createTextNode(u));
+    const nameWrapper = document.createElement("div");
+    nameWrapper.style.display = "flex";
+    nameWrapper.style.alignItems = "center";
+    nameWrapper.style.gap = "8px";
+    nameWrapper.style.fontWeight = "600";
+    nameWrapper.appendChild(cb);
+    nameWrapper.appendChild(document.createTextNode(u));
+    label.appendChild(nameWrapper);
+
+    const countsSub = document.createElement("div");
+    countsSub.style.fontSize = "11px";
+    countsSub.style.color = "#8b5cf6";
+    countsSub.style.paddingLeft = "22px";
+    countsSub.style.fontWeight = "500";
+    const tcCount = allTCAssigned[u] || 0;
+    const fpCount = allFPAssigned[u] || 0;
+    countsSub.textContent = `📞 TC: ${tcCount} | 🦚 Fest: ${fpCount}`;
+    label.appendChild(countsSub);
+
     rowDiv.appendChild(label);
 
     // Call Limit Input Box

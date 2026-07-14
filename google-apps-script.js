@@ -855,6 +855,38 @@ function buildDataPayload(user, sheetName, campaignType, skipCache) {
     });
   }
 
+  // Calculate Thursday and Festival assigned counts for the currently logged-in user
+  var dbDoc = ensureSetup();
+  var userName = user.name;
+  
+  var TCAssigned = 0;
+  var TCSheet = dbDoc.getSheetByName(SHEET_CALLING);
+  if (TCSheet) {
+    var TCLast = TCSheet.getLastRow();
+    if (TCLast > 1) {
+      var TCValues = TCSheet.getRange(2, 7, TCLast - 1, 1).getValues();
+      for (var k = 0; k < TCValues.length; k++) {
+        if (String(TCValues[k][0]).trim() === userName) {
+          TCAssigned++;
+        }
+      }
+    }
+  }
+
+  var FPAssigned = 0;
+  var FPSheet = dbDoc.getSheetByName(SHEET_FESTIVAL);
+  if (FPSheet) {
+    var FPLast = FPSheet.getLastRow();
+    if (FPLast > 1) {
+      var FPValues = FPSheet.getRange(2, 7, FPLast - 1, 1).getValues();
+      for (var k = 0; k < FPValues.length; k++) {
+        if (String(FPValues[k][0]).trim() === userName) {
+          FPAssigned++;
+        }
+      }
+    }
+  }
+
   var payload = {
     status: "success",
     user: user,
@@ -864,14 +896,54 @@ function buildDataPayload(user, sheetName, campaignType, skipCache) {
     wsOptions: WS_OPTIONS,
     statusOptions: STATUS_OPTIONS,
     festivals: getFestivals(),
-    settings: getSettings()
+    settings: getSettings(),
+    thursdayAssigned: TCAssigned,
+    festivalAssigned: FPAssigned
   };
+
   if (user.role === ROLE_ADMIN) {
     var allUsers = getUsers(false);
     payload.userNames = allUsers.map(function (u) { return u.name; });
     payload.userLimits = allUsers.reduce(function (acc, u) { acc[u.name] = u.limit; return acc; }, {});
     payload.userFestLimits = allUsers.reduce(function (acc, u) { acc[u.name] = u.festLimit; return acc; }, {});
     payload.userPhones = allUsers.map(function (u) { return normalizePhone(u.phone); });
+
+    // Calculate Thursday and Festival assigned counts for all callers (for the Admin Festival Promotions user details list)
+    var allTCAssigned = {};
+    var allFPAssigned = {};
+    allUsers.forEach(function(u) {
+      allTCAssigned[u.name] = 0;
+      allFPAssigned[u.name] = 0;
+    });
+
+    if (TCSheet) {
+      var TCLast = TCSheet.getLastRow();
+      if (TCLast > 1) {
+        var TCValues = TCSheet.getRange(2, 7, TCLast - 1, 1).getValues();
+        for (var k = 0; k < TCValues.length; k++) {
+          var name = String(TCValues[k][0]).trim();
+          if (allTCAssigned.hasOwnProperty(name)) {
+            allTCAssigned[name]++;
+          }
+        }
+      }
+    }
+
+    if (FPSheet) {
+      var FPLast = FPSheet.getLastRow();
+      if (FPLast > 1) {
+        var FPValues = FPSheet.getRange(2, 7, FPLast - 1, 1).getValues();
+        for (var k = 0; k < FPValues.length; k++) {
+          var name = String(FPValues[k][0]).trim();
+          if (allFPAssigned.hasOwnProperty(name)) {
+            allFPAssigned[name]++;
+          }
+        }
+      }
+    }
+
+    payload.allTCAssigned = allTCAssigned;
+    payload.allFPAssigned = allFPAssigned;
 
     // Auto-assign state for Festival Promotions admin panel
     var aaUsers = [];
