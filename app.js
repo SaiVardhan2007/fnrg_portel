@@ -495,24 +495,31 @@ async function api(params, postBody) {
     }
     : { method: "GET" };
 
-  try {
-    const response = await fetch(url, options);
-    if (!response.ok) {
-      return { status: "error", code: "HTTP_" + response.status, message: "Server error (" + response.status + ")" };
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        throw new Error("HTTP_" + response.status);
+      }
+      const data = await response.json();
+      if (!data || typeof data.status === "undefined") {
+        throw new Error("BAD_RESPONSE");
+      }
+      return data;
+    } catch (err) {
+      if (attempt === maxAttempts) {
+        return {
+          status: "error",
+          code: "NETWORK",
+          message: navigator.onLine
+            ? "Could not reach the server. Please try again."
+            : "You are offline. Please check your connection."
+        };
+      }
+      // Wait 1 second before retrying
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    const data = await response.json();
-    if (!data || typeof data.status === "undefined") {
-      return { status: "error", code: "BAD_RESPONSE", message: "Unexpected response from server" };
-    }
-    return data;
-  } catch (err) {
-    return {
-      status: "error",
-      code: "NETWORK",
-      message: navigator.onLine
-        ? "Could not reach the server. Please try again."
-        : "You are offline. Please check your connection."
-    };
   }
 }
 
@@ -859,6 +866,7 @@ function createContactRow(contact, isMasterTable, isCultivation, serialNumber) {
   
   if (serialNumber !== undefined && serialNumber !== null) {
     const snoTd = document.createElement("td");
+    snoTd.className = "cell-sno";
     snoTd.style.fontWeight = "600";
     snoTd.style.color = "var(--text-muted)";
     snoTd.style.textAlign = "center";
@@ -1518,6 +1526,23 @@ async function submitRow(contact, tr, controls, btn) {
 
 async function refreshContacts() {
   refreshBtn.classList.add("spinning");
+
+  if (activeCampaign === "") {
+    const data = await api({
+      action: "login",
+      username: currentUser.loginId,
+      password: currentUser.phone,
+      skipCache: "true"
+    });
+    refreshBtn.classList.remove("spinning");
+    if (data.status === "success") {
+      applyPayload(data);
+      setSyncStatus("Up to date", "saved");
+    } else {
+      showToast(data.message || "Refresh failed.", "error");
+    }
+    return;
+  }
 
   if (activeCampaign === "Special Events" && isAdmin()) {
     await loadAdminFestivalData();
