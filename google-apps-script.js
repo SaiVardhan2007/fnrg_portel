@@ -34,8 +34,8 @@ var SHEET_CALLING = "GIC Calling";
 var SHEET_FESTIVAL = "Special Events";
 
 var CACHE_KEY_CALLING = "calling_v10";
-var CACHE_KEY_USERS = "users_v3";
-var CACHE_KEY_SETUP = "setup_v14";
+var CACHE_KEY_USERS = "users_v4";
+var CACHE_KEY_SETUP = "setup_v15";
 var CACHE_KEY_VALIDATION = "validation_sig_v10";
 var CACHE_SECONDS = 60;
 
