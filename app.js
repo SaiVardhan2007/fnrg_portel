@@ -2592,6 +2592,39 @@ function populateAutoAssignUsers(allUsers, selectedUsers, selectedUserFestivals)
   autoAssignUsersList.innerHTML = "";
   selectedUserFestivals = selectedUserFestivals || {};
 
+  // Column Headers
+  if (allUsers.length > 0) {
+    const headerDiv = document.createElement("div");
+    headerDiv.style.display = "flex";
+    headerDiv.style.alignItems = "center";
+    headerDiv.style.justifyContent = "space-between";
+    headerDiv.style.gap = "15px";
+    headerDiv.style.padding = "4px 0";
+    headerDiv.style.borderBottom = "1px solid #e5e7eb";
+    headerDiv.style.fontWeight = "bold";
+    headerDiv.style.fontSize = "11px";
+    headerDiv.style.color = "#6b7280";
+
+    const userLbl = document.createElement("span");
+    userLbl.textContent = "Caller Name";
+    userLbl.style.flex = "1";
+
+    const limitLbl = document.createElement("span");
+    limitLbl.textContent = "Call Limit";
+    limitLbl.style.width = "65px";
+    limitLbl.style.textAlign = "center";
+
+    const filterLbl = document.createElement("span");
+    filterLbl.textContent = "Festival Filter";
+    filterLbl.style.width = "130px";
+    filterLbl.style.textAlign = "right";
+
+    headerDiv.appendChild(userLbl);
+    headerDiv.appendChild(limitLbl);
+    headerDiv.appendChild(filterLbl);
+    autoAssignUsersList.appendChild(headerDiv);
+  }
+
   allUsers.forEach(u => {
     // Row wrapper container
     const rowDiv = document.createElement("div");
@@ -2643,6 +2676,45 @@ function populateAutoAssignUsers(allUsers, selectedUsers, selectedUserFestivals)
     label.appendChild(cb);
     label.appendChild(document.createTextNode(u));
     rowDiv.appendChild(label);
+
+    // Call Limit Input Box
+    const limitInput = document.createElement("input");
+    limitInput.type = "number";
+    limitInput.className = "status-select";
+    limitInput.style.width = "65px";
+    limitInput.style.padding = "4px 8px";
+    limitInput.style.fontSize = "12px";
+    limitInput.style.margin = "0";
+    limitInput.placeholder = "No Limit";
+    limitInput.value = userLimits[u] !== undefined ? userLimits[u] : "";
+
+    limitInput.addEventListener("change", async () => {
+      limitInput.disabled = true;
+      const newLimit = limitInput.value.trim();
+      const response = await api(null, {
+        action: "updateUserLimit",
+        requesterPhone: currentUser.phone,
+        username: u,
+        limit: newLimit === "" ? "" : parseInt(newLimit, 10)
+      });
+      limitInput.disabled = false;
+      if (response.status === "success") {
+        showToast(`Call limit for ${u} updated to: ${newLimit || "No Limit"}`, "success");
+        if (response.userLimits) {
+          userLimits = response.userLimits;
+        }
+        if (response.contacts) contacts = response.contacts;
+        if (response.userNames) userNames = response.userNames;
+        const freshSelected = response.autoAssignUsers || [];
+        populateAutoAssignUsers(userNames, freshSelected, response.autoAssignUserFestivals || {});
+        renderAdminFestivalContacts();
+      } else {
+        showToast("Error updating limit: " + response.message, "error");
+        limitInput.value = userLimits[u] !== undefined ? userLimits[u] : "";
+      }
+    });
+
+    rowDiv.appendChild(limitInput);
 
     // Right select dropdown for festival assignment
     const select = document.createElement("select");

@@ -1295,6 +1295,51 @@ function doPost(e) {
       }
     }
 
+    if (body.action === "updateUserLimit") {
+      var requester = findUser(body.requesterPhone || "");
+      if (!requester || requester.role !== ROLE_ADMIN) {
+        return jsonResponse({ status: "error", code: "FORBIDDEN", message: "Only admin can configure call limits." });
+      }
+
+      var targetUser = body.username || "";
+      var limitVal = body.limit;
+      if (limitVal !== "") {
+        limitVal = Number(limitVal);
+        if (isNaN(limitVal)) limitVal = "";
+      }
+
+      var locked = lock.tryLock(30000);
+      if (!locked) {
+        return jsonResponse({ status: "error", code: "BUSY", message: "Server is busy, please try again." });
+      }
+
+      try {
+        var doc = ensureSetup();
+        var sheet = doc.getSheetByName(SHEET_USERS);
+        var lastRow = sheet.getLastRow();
+        if (lastRow > 1) {
+          var names = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+          for (var i = 0; i < names.length; i++) {
+            if (String(names[i][0]).trim() === targetUser) {
+              sheet.getRange(i + 2, 4).setValue(limitVal); // Column D is 4 (Call Limit)
+              break;
+            }
+          }
+        }
+        SpreadsheetApp.flush();
+        CacheService.getScriptCache().remove(CACHE_KEY_USERS);
+
+        // Run auto assignment immediately in case assignments can now be balanced
+        try {
+          runAutoAssignment();
+        } catch(e) {}
+
+        return jsonResponse(buildDataPayload(requester, "Festival Promotions"));
+      } finally {
+        lock.releaseLock();
+      }
+    }
+
     if (body.action === "importContacts") {
       var requester = findUser(body.requesterPhone || "");
       if (!requester) {
