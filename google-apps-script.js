@@ -1795,7 +1795,7 @@ function getFestivalForDate(targetDate) {
 
 function processFormResponses() {
   var doc = SpreadsheetApp.getActiveSpreadsheet();
-  var formSheet = doc.getSheetByName("Form Responces 1") || doc.getSheetByName("Form Responses 1");
+  var formSheet = doc.getSheetByName("Ratha Yatra 2026") || doc.getSheetByName("Form Responces 1") || doc.getSheetByName("Form Responses 1");
   if (!formSheet) return;
   
   var festivalSheet = doc.getSheetByName(SHEET_FESTIVAL);
