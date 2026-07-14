@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>FNRG Portal</title>
+  <meta name="description" content="FNRG Portal — Thursday Calling tracker">
+  <meta name="theme-color" content="#0f766e">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ============ LOGIN VIEW ============ -->
+  <section id="login-view" class="view">
+    <div class="login-card">
+      <div class="login-logo">FNRG</div>
+      <h1>Welcome</h1>
+      <p class="login-hint">Enter your phone number to continue</p>
+
+      <form id="login-form" autocomplete="off">
+        <div class="phone-input-wrap">
+          <span class="phone-prefix">+91</span>
+          <input
+            id="phone-input"
+            type="tel"
+            inputmode="numeric"
+            maxlength="10"
+            placeholder="10-digit phone number"
+            aria-label="Phone number"
+            required
+          >
+        </div>
+        <p id="login-error" class="login-error" role="alert"></p>
+        <button id="login-btn" type="submit" class="btn-primary">
+          <span class="btn-label">Enter</span>
+          <span class="btn-spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ THURSDAY CALLING VIEW ============ -->
+  <section id="app-view" class="view hidden">
+    <header class="app-header">
+      <div class="header-left">
+        <button id="back-to-dashboard-btn" class="back-btn hidden" aria-label="Go back to dashboard">&larr; Dashboard</button>
+        <div class="header-user-info">
+          <p class="header-greeting">Hare Krishna,</p>
+          <h1 id="user-name" class="header-name">—</h1>
+          <span id="role-badge" class="role-badge hidden">Admin</span>
+        </div>
+      </div>
+      <div class="header-right-group">
+        <!-- Stats summary (Shown to all) -->
+        <div id="stats-summary-bar" class="stats-summary-bar">
+          <div class="stat-box">
+            <span class="stat-val" id="stat-total">—</span>
+            <span class="stat-lbl">Assigned</span>
+          </div>
+          <div class="stat-box positive">
+            <span class="stat-val" id="stat-positive">—</span>
+            <span class="stat-lbl">Positive</span>
+          </div>
+          <div class="stat-box pending">
+            <span class="stat-val" id="stat-pending">—</span>
+            <span class="stat-lbl">Pending</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="refresh-btn" class="icon-btn" title="Refresh data" aria-label="Refresh">&#8635;</button>
+          <button id="logout-btn" class="icon-btn" title="Log out" aria-label="Log out">&#10162;</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============ CAMPAIGN DASHBOARD VIEW ============ -->
+    <div id="campaign-dashboard" class="dashboard-view hidden">
+      <h2 class="dashboard-title">What would you like to do?</h2>
+      <div class="dashboard-grid">
+        <div class="dashboard-card disabled" data-campaign="Thursday Calling">
+          <span class="card-icon">📞</span>
+          <span class="card-name">Thursday Calling</span>
+          <span class="card-desc">Call logs and weekly round statistics</span>
+        </div>
+        <div class="dashboard-card" data-campaign="Festival Promotions">
+          <span class="card-icon">🦚</span>
+          <span class="card-name">Festival Promotions</span>
+          <span class="card-desc">Festival and special event invitations list</span>
+        </div>
+        <div class="dashboard-card disabled" data-campaign="Reception">
+          <span class="card-icon">🙏</span>
+          <span class="card-name">Reception</span>
+          <span class="card-desc">Search contacts and mark session attendance</span>
+        </div>
+        <div class="dashboard-card disabled" data-campaign="Cultivation">
+          <span class="card-icon">🌱</span>
+          <span class="card-name">Cultivation</span>
+          <span class="card-desc">People you are cultivating across all campaigns</span>
+        </div>
+      </div>
+    </div>
+
+    <main id="main-content" class="page">
+
+      <!-- Admin Tab Switcher (Admin Only) -->
+      <div id="admin-tabs" class="admin-tabs hidden">
+        <button class="admin-tab active" data-target="master-data-section">All People Data</button>
+        <button class="admin-tab" data-target="calling-section">Calling Round</button>
+        <button class="admin-tab" data-target="admin-festival-section">Festival Promotions</button>
+      </div>
+
+      <!-- ============ SECTION 1: ALL PEOPLE DATA (Admin Only) ============ -->
+      <div id="master-data-section" class="admin-section hidden">
+        <div class="page-title-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+          <h2 class="page-title" style="margin:0;">All People Data</h2>
+          <div style="display:flex; gap:8px;">
+            <button id="admin-add-person-btn" class="btn primary" style="font-size: 13.5px; padding: 8px 16px; border-radius: 10px;">+ Add Person</button>
+            <button id="admin-import-btn" class="btn-secondary" style="font-size: 13.5px; padding: 8px 16px; border-radius: 10px; background:#fff; border:1px solid var(--border); cursor:pointer;">📥 Import Excel</button>
+            <button id="admin-export-btn" class="btn-secondary" style="font-size: 13.5px; padding: 8px 16px; border-radius: 10px; background:#fff; border:1px solid var(--border); cursor:pointer;">📤 Export Excel</button>
+            <input type="file" id="import-file-input" accept=".xlsx, .xls, .csv" style="display: none;">
+          </div>
+        </div>
+        <div class="table-card">
+          <div class="table-scroll">
+            <table class="contacts-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone Number</th>
+                  <th>W/S</th>
+                  <th>Sessions</th>
+                  <th>No. of Calls</th>
+                  <th>Cultivated By</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="master-contacts-body">
+                <tr class="loading-row">
+                  <td colspan="7">
+                    <span class="btn-spinner dark"></span> Loading master list…
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SECTION 1.5: FESTIVAL PROMOTIONS ADMIN (Admin Only) ============ -->
+      <div id="admin-festival-section" class="admin-section hidden">
+        <div class="page-title-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+          <h2 class="page-title" style="margin:0;">Festival Promotions Admin</h2>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <label for="admin-festival-filter" style="font-weight:600; font-size:13.5px; color:var(--text);">Filter:</label>
+            <select id="admin-festival-filter" class="status-select" style="min-width:160px; max-width:220px; padding:8px 30px 8px 12px; font-size:13.5px;">
+              <option value="ALL">All Festivals</option>
+            </select>
+            <button id="admin-message-btn-festival" class="btn-secondary" style="padding:8px 14px; font-size:13px; font-weight:700; border-radius:8px;" title="Configure Promotion Message Template">Promotion Message</button>
+          </div>
+        </div>
+
+        <!-- Auto Assign Panel -->
+        <div class="table-card" style="padding: 20px; margin-bottom: 20px; background:#fffdf9; border-color:#f1ebd9; border-radius:18px;">
+          <h3 style="font-size:15px; font-weight:700; margin-bottom:10px; color:var(--indigo);">⚙️ Autonomous Auto Assign Settings</h3>
+          <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:15px; line-height:1.4;">
+            Select users to automatically distribute newly added festival contacts to. This runs continuously in the cloud without needing you to keep the app open.
+          </p>
+          <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start; margin-bottom:15px;">
+            <div>
+              <p style="font-size:12.5px; font-weight:600; margin-bottom:8px; color:var(--text);">Select Users:</p>
+              <div id="auto-assign-users-list" style="display:flex; flex-direction:column; gap:6px; max-height:150px; overflow-y:auto; padding:6px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; min-width:200px;">
+                <!-- User checkboxes populated dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-scroll">
+            <table class="contacts-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone Number</th>
+                  <th>W/S</th>
+                  <th>Sessions</th>
+                  <th>Calls</th>
+                  <th>Assigned To</th>
+                  <th>Event</th>
+                  <th>Calling Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="admin-festival-contacts-body">
+                <tr class="loading-row">
+                  <td colspan="9">
+                    <span class="btn-spinner dark"></span> Loading festival list…
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SECTION 2: THURSDAY CALLING VIEW (All Users) ============ -->
+      <div id="calling-section">
+        <div class="page-title-row">
+          <h2 id="calling-page-title" class="page-title">Thursday Calling <span id="active-date" class="active-date"></span></h2>
+          <div class="title-actions">
+            <button id="assign-btn" class="btn-secondary hidden" title="Randomly assign calls to users">Assign Calls</button>
+            <button id="save-all-btn" class="btn-secondary hidden" title="Save all changed rows at once" disabled>Save Assignments</button>
+            <button id="assigned-data-btn" class="btn-secondary hidden" title="Show assignments summary">Assigned Data</button>
+            <button id="admin-message-btn-calling" class="btn-secondary hidden" title="Configure Promotion Message Template">Promotion Message</button>
+            <span id="sync-status" class="sync-status"></span>
+          </div>
+        </div>
+
+        <!-- Poster Banner (shown only if configured) -->
+        <div id="campaign-poster-banner" class="table-card hidden" style="padding: 15px; margin-bottom: 15px; text-align: center; background: #f8fafc; border-color: #cbd5e1; border-radius: 12px;">
+          <p style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--indigo); margin-top:0;">📢 Campaign Poster</p>
+          <img id="campaign-poster-img" src="" alt="Campaign Poster" style="max-width: 100%; max-height: 280px; border-radius: 10px; box-shadow: var(--shadow); margin-bottom: 10px; object-fit: contain;" />
+          <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.45; margin: 0; text-align: left; max-width: 600px; margin: 0 auto;">
+            💡 <strong>To send as photo caption in WhatsApp:</strong><br>
+            1. Right-click (or long-press on mobile) this poster & select <strong>"Copy Image"</strong>.<br>
+            2. Click the <strong>"Send message"</strong> button below any contact (opens WhatsApp with the text message ready).<br>
+            3. Copy the text from the WhatsApp chat input box, then press <strong>Ctrl+V / Paste</strong> to attach the poster. Paste the text into the caption box before sending!
+          </p>
+        </div>
+
+        <div class="table-card">
+          <div class="table-scroll">
+            <table class="contacts-table">
+              <thead>
+                <!-- Columns are rendered by JS dynamically based on role -->
+                <tr id="contacts-head-row">
+                  <th>Name</th>
+                  <th>Phone Number</th>
+                  <th>W/S</th>
+                  <th>Sessions</th>
+                  <th>No. of Calls</th>
+                  <th>Calling Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="contacts-body">
+                <tr class="loading-row">
+                  <td colspan="7">
+                    <span class="btn-spinner dark"></span> Loading contacts…
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ RECEPTION SECTION ============ -->
+      <div id="reception-section" class="campaign-section hidden">
+        <div class="page-title-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+          <h2 class="page-title" style="margin:0;">Reception — Attendance</h2>
+          <button id="reception-add-person-btn" class="btn primary" style="font-size: 13.5px; padding: 8px 16px; border-radius: 10px;">+ New Registration</button>
+        </div>
+        <div class="reception-search-wrap">
+          <input id="reception-search" type="tel" maxlength="10" placeholder="Enter phone number to search…" autocomplete="off">
+          <span id="reception-loader" class="btn-spinner dark hidden"></span>
+        </div>
+        <div id="reception-result" class="reception-result hidden">
+          <div class="reception-card">
+            <div class="reception-info">
+              <p class="reception-name" id="reception-name">—</p>
+              <p class="reception-phone" id="reception-phone">—</p>
+              <p class="reception-sessions" id="reception-sessions">Sessions attended: 0</p>
+            </div>
+            <div class="reception-action">
+              <input id="reception-session-name" type="text" placeholder="Session name (optional)" value="">
+              <button id="mark-attendance-btn" class="btn primary">🙏 Mark Attendance</button>
+            </div>
+          </div>
+        </div>
+        <div id="reception-not-found" class="reception-not-found hidden">
+          <p>No contact found with this number.</p>
+        </div>
+
+        <!-- Attendance Marked Today list -->
+        <div class="attendance-marked-wrap" style="margin-top: 30px;">
+          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--text);">Attendance Marked Today</h3>
+          <div class="table-card">
+            <div class="table-scroll">
+              <table class="contacts-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Time</th>
+                    <th>Session</th>
+                  </tr>
+                </thead>
+                <tbody id="reception-attendance-body">
+                  <tr>
+                    <td colspan="4" style="text-align:center; color:var(--text-muted); padding:16px;">No attendance marked today.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ CULTIVATION SECTION ============ -->
+      <div id="cultivation-section" class="campaign-section hidden">
+        <h2 class="page-title">Cultivation — Your People</h2>
+        <div id="cultivation-empty" class="cultivation-empty hidden">
+          <p>No contacts are assigned to you for cultivation yet.</p>
+        </div>
+        <div class="table-scroll">
+          <table id="cultivation-table" class="contacts-table hidden">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>W/S</th>
+                <th>Sessions</th>
+                <th>Calls</th>
+                <th>Campaign</th>
+              </tr>
+            </thead>
+            <tbody id="cultivation-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </section>
+
+  <!-- "Others" status details popup -->
+  <div id="others-modal" class="modal-overlay">
+    <div class="modal-card">
+      <h3>Other Status</h3>
+      <p class="modal-hint">Please type the calling status details (mandatory)</p>
+      <input id="others-input" type="text" maxlength="200" placeholder="e.g. Asked to call next month">
+      <p id="others-error" class="modal-error" role="alert"></p>
+      <div class="modal-actions">
+        <button id="others-cancel" type="button" class="modal-btn secondary">Cancel</button>
+        <button id="others-confirm" type="button" class="modal-btn primary">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Call History popup modal -->
+  <div id="history-modal" class="modal-overlay">
+    <div class="modal-card history-card">
+      <div class="modal-header">
+        <h3 id="history-modal-title">Call History</h3>
+        <button id="history-close-btn" class="modal-close-x" aria-label="Close modal">&times;</button>
+       </div>
+       <p id="history-contact-info" class="modal-hint">Contact: —</p>
+       <div class="history-table-scroll">
+         <table class="history-table">
+           <thead>
+             <tr>
+               <th>Time</th>
+               <th id="history-th-2">Round</th>
+               <th id="history-th-3">Status</th>
+               <th id="history-th-4">By</th>
+             </tr>
+           </thead>
+           <tbody id="history-body">
+             <tr>
+               <td colspan="4" class="no-history">No calls logged yet.</td>
+             </tr>
+           </tbody>
+         </table>
+       </div>
+    </div>
+  </div>
+
+  <!-- Add Person modal -->
+  <div id="add-person-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:16px;">
+        <h3 id="add-person-title" style="margin:0; font-size:18px; font-weight:700;">Add Person</h3>
+        <button id="add-person-close" class="modal-close-x" aria-label="Close modal" style="background:none; border:none; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label for="add-person-name" style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--text);">Full Name</label>
+          <input id="add-person-name" type="text" placeholder="Enter full name" style="width:100%; padding:11px 14px; border:1px solid var(--border); border-radius:10px; font-family:var(--font); font-size:14px; background:var(--bg); color:var(--text);">
+        </div>
+        <div class="form-group" style="margin-bottom: 18px;">
+          <label for="add-person-phone" style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--text);">Phone Number (10 digits)</label>
+          <input id="add-person-phone" type="tel" maxlength="10" placeholder="Enter 10-digit number" style="width:100%; padding:11px 14px; border:1px solid var(--border); border-radius:10px; font-family:var(--font); font-size:14px; background:var(--bg); color:var(--text);">
+        </div>
+        <p id="add-person-error" class="modal-error" style="color:#ef4444; font-size:12.5px; margin-top:-10px; margin-bottom:12px; min-height:18px;" role="alert"></p>
+        <button id="add-person-submit" class="btn primary" style="width:100%; padding:12px; border-radius:10px; font-weight:600;">Add Person</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assigned Data summary popup modal -->
+  <div id="assigned-data-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:18px; font-weight:700;">Assigned Calls Summary</h3>
+        <button id="assigned-data-close" class="modal-close-x" aria-label="Close modal" style="background:none; border:none; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="table-card" style="box-shadow:none; border:none;">
+          <div class="table-scroll">
+            <table class="contacts-table">
+              <thead>
+                <tr>
+                  <th>User Name</th>
+                  <th>Calls Assigned</th>
+                </tr>
+              </thead>
+              <tbody id="assigned-data-body">
+                <!-- Dynamic rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Column Mapping modal -->
+  <div id="import-mapping-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:18px; font-weight:700;">Map Excel Columns</h3>
+        <button id="import-mapping-close" class="modal-close-x" aria-label="Close modal" style="background:none; border:none; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-hint">Match FNRG Portal columns to the columns inside your uploaded file:</p>
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label for="mapping-name" style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--text);">Name Column</label>
+          <select id="mapping-name" class="status-select" style="width:100%; max-width:none;"></select>
+        </div>
+        <div class="form-group" style="margin-bottom: 18px;">
+          <label for="mapping-phone" style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--text);">Phone Number Column</label>
+          <select id="mapping-phone" class="status-select" style="width:100%; max-width:none;"></select>
+        </div>
+        <p id="import-mapping-error" class="modal-error" style="color:#ef4444; font-size:12.5px; margin-top:-10px; margin-bottom:12px; min-height:18px;" role="alert"></p>
+        <button id="import-mapping-submit" class="btn primary" style="width:100%; padding:12px; border-radius:10px; font-weight:600;">Import Data</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Promotion Message modal -->
+  <div id="message-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="message-modal-title">Configure Message</h3>
+        <button id="message-modal-close" class="modal-close-x" aria-label="Close modal">&times;</button>
+      </div>
+      <div style="margin-top: 15px;">
+        <div style="margin-bottom: 15px;">
+          <label for="message-template-input" style="font-weight:600; font-size:13.5px; color:var(--text); display:block; margin-bottom:8px;">Message Template:</label>
+          <p style="font-size:11.5px; color:var(--text-muted); margin-bottom:12px; line-height:1.4;">
+            Use placeholder <strong>{name}</strong> to automatically personalize the message with the contact's name.
+          </p>
+          <textarea id="message-template-input" style="width:100%; min-height:130px; padding:10px; border:1.5px solid var(--border); border-radius:12px; font-family:inherit; font-size:13.5px; resize:vertical; line-height:1.5;" placeholder="Type your WhatsApp message template here..."></textarea>
+        </div>
+        <div style="margin-bottom: 18px;">
+          <label for="message-poster-upload" style="font-weight:600; font-size:13.5px; color:var(--text); display:block; margin-bottom:8px;">Upload Poster Image:</label>
+          <input id="message-poster-upload" type="file" accept="image/*" style="width:100%; padding:8px; border:1.5px solid var(--border); border-radius:12px; font-family:inherit; font-size:13.5px; background:#fff; cursor:pointer;" />
+          <div id="message-poster-preview-container" class="hidden" style="margin-top: 10px; text-align: center;">
+            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 5px; text-align:left;">Preview:</p>
+            <img id="message-poster-preview" src="" alt="Poster Preview" style="max-height: 120px; max-width:100%; border-radius: 8px; box-shadow: var(--shadow); object-fit: contain; border:1px solid var(--border);" />
+            <button id="message-poster-remove-btn" type="button" style="display:block; margin: 5px auto 0; font-size:11.5px; color:#ef4444; background:none; border:none; cursor:pointer; font-weight:700;">Remove Image</button>
+          </div>
+        </div>
+        <p id="message-modal-error" class="modal-error" style="color:#ef4444; font-size:12.5px; margin-top:-10px; margin-bottom:12px; min-height:18px;" role="alert"></p>
+        <button id="save-message-btn" class="btn primary" style="width:100%; padding:11px 0; border-radius:12px; font-weight:700;">
+          <span class="btn-label">Save Template</span>
+          <span class="btn-spinner" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notifications -->
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
