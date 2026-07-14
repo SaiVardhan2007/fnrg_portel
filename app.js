@@ -1454,6 +1454,38 @@ function formatPhone(phone) {
   return phone.length === 10 ? phone.slice(0, 5) + " " + phone.slice(5) : phone;
 }
 
+function formatTime12h(ts) {
+  if (!ts) return "—";
+  const date = new Date(ts);
+  if (isNaN(date.getTime())) return ts;
+  
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "pm" : "am";
+  hours = hours % 12;
+  hours = hours ? hours : 12; // 0 should be 12
+  return String(hours).padStart(2, "0") + ":" + minutes + " " + ampm;
+}
+
+function formatDateAndTime12h(ts) {
+  if (!ts) return "—";
+  const date = new Date(ts);
+  if (isNaN(date.getTime())) return ts;
+
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const day = date.getDate();
+  const month = months[date.getMonth()];
+  
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "pm" : "am";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const timeStr = String(hours).padStart(2, "0") + ":" + minutes + " " + ampm;
+  
+  return day + " " + month + ", " + timeStr;
+}
+
 let syncStatusTimer = null;
 function setSyncStatus(text, kind) {
   syncStatus.textContent = text;
@@ -1660,7 +1692,7 @@ function autoAssignContacts() {
 
 async function showCallHistoryModal(contact) {
   historyModalTitle.textContent = "Call History";
-  historyTh2.textContent = "Round";
+  historyTh2.textContent = "Date";
   historyTh3.textContent = "Status";
   historyTh4.style.display = "";
 
@@ -1684,7 +1716,7 @@ async function showCallHistoryModal(contact) {
         const tr = document.createElement("tr");
 
         const timeTd = document.createElement("td");
-        timeTd.textContent = log.time || "—";
+        timeTd.textContent = formatTime12h(log.time);
 
         const roundTd = document.createElement("td");
         roundTd.textContent = log.round || "—";
@@ -1737,7 +1769,7 @@ async function showSessionHistoryModal(contact) {
         const tr = document.createElement("tr");
 
         const timeTd = document.createElement("td");
-        timeTd.textContent = log.time || "—";
+        timeTd.textContent = formatDateAndTime12h(log.time);
 
         const sessionTd = document.createElement("td");
         sessionTd.textContent = log.session || "—";
