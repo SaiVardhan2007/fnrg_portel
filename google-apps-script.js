@@ -163,8 +163,8 @@ function ensureSetup() {
   var users = doc.getSheetByName(SHEET_USERS);
   if (!users) {
     users = doc.insertSheet(SHEET_USERS);
-    try { users.getRange(1, 1, 1, 8).setValues([["Name", "Phone Number", "Role", "Call Limit", "Auto Assign", "Festival", "From Date", "To Date"]]); } catch(e){}
-    try { styleHeader(users.getRange(1, 1, 1, 8), "#0f766e"); } catch(e){}
+    try { users.getRange(1, 1, 1, 9).setValues([["Name", "Phone Number", "Role", "Call Limit", "Auto Assign", "Festival", "From Date", "To Date", "Festival Assigned"]]); } catch(e){}
+    try { styleHeader(users.getRange(1, 1, 1, 9), "#0f766e"); } catch(e){}
     try { users.setFrozenRows(1); } catch(e){}
     try { users.getRange(2, 2, 1000, 1).setNumberFormat("@"); } catch(e){}
     try { users.getRange(2, 4, 1000, 1).setNumberFormat("#"); } catch(e){}
@@ -228,6 +228,14 @@ function ensureSetup() {
       }
     } catch(e){}
     try {
+      // Migrate: check I header is Festival Assigned
+      var festAssignedHeader = String(users.getRange(1, 9).getValue()).trim();
+      if (festAssignedHeader !== "Festival Assigned") {
+        users.getRange(1, 9).setValue("Festival Assigned");
+        try { styleHeader(users.getRange(1, 9), "#0f766e"); } catch(e){}
+      }
+    } catch(e){}
+    try {
       // Ensure the admin user exists and has the admin role
       var adminRowIndex = -1;
       var uLast2 = users.getLastRow();
@@ -245,6 +253,23 @@ function ensureSetup() {
         try { users.getRange(users.getLastRow(), 2).setNumberFormat("@").setValue(ADMIN_SEED.phone); } catch(e){}
       } else {
         users.getRange(adminRowIndex, 3).setValue(ROLE_ADMIN);
+      }
+    } catch(e){}
+    
+    // Automatically write formulas for Festival Assigned column in Users sheet
+    try {
+      var uLast3 = users.getLastRow();
+      if (uLast3 > 1) {
+        var roles = users.getRange(2, 3, uLast3 - 1, 1).getValues();
+        for (var r = 0; r < roles.length; r++) {
+          var role = String(roles[r][0]).trim().toLowerCase();
+          var rowIndex = r + 2;
+          if (role !== "festivals") {
+            users.getRange(rowIndex, 9).setFormula("=COUNTIF('" + SHEET_FESTIVAL + "'!G:G, A" + rowIndex + ")");
+          } else {
+            users.getRange(rowIndex, 9).setValue("");
+          }
+        }
       }
     } catch(e){}
   }
@@ -1689,16 +1714,20 @@ function runAutoAssignment() {
           }
         }
 
-        // Filter eligible users who match this contact's event
+        // Filter eligible users who match this contact's event and haven't hit their call limit
         var eligibleUsers = [];
         activeAssignees.forEach(function(u) {
-          // A user is eligible if they are assigned to this event specifically, or if their festival filter is blank/All
-          if (u.festival === eventName || u.festival === "") {
-            eligibleUsers.push(u.name);
+          var userLimit = u.limit || 999;
+          var currentCount = userCounts[u.name] || 0;
+          if (currentCount < userLimit) {
+            // A user is eligible if they are assigned to this event specifically, or if their festival filter is blank/All
+            if (u.festival === eventName || u.festival === "") {
+              eligibleUsers.push(u.name);
+            }
           }
         });
 
-        if (eligibleUsers.length === 0) continue; // Skip assignment if no callers are mapped to this festival
+        if (eligibleUsers.length === 0) continue; // Skip assignment if all callers hit their limit or none are mapped to this festival
 
         // Pick eligible user with minimum assigned count
         var minUser = eligibleUsers[0];

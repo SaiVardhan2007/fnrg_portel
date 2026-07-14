@@ -589,22 +589,24 @@ function showApp() {
   loginView.classList.add("hidden");
   appView.classList.remove("hidden");
 
-  if (isAdmin()) {
-    // Admin skips dashboard — goes straight to Festival Promotions
-    dashboardView.classList.add("hidden");
-    activeCampaign = "Festival Promotions";
-    selectCampaign("Festival Promotions", true);
-  } else {
-    // Regular users see the campaign dashboard
-    dashboardView.classList.remove("hidden");
-    mainContent.classList.add("hidden");
-    adminTabs.classList.add("hidden");
-    backToDashboardBtn.classList.add("hidden");
-    statsSummaryBar.classList.add("hidden");
-    
-    // Clear hash and push dashboard state
-    window.history.replaceState({ page: "dashboard" }, "", "./");
-  }
+  // Enable/disable dashboard campaign buttons based on role
+  document.querySelectorAll(".dashboard-card").forEach(card => {
+    if (isAdmin() || card.dataset.campaign === "Festival Promotions") {
+      card.classList.remove("disabled");
+    } else {
+      card.classList.add("disabled");
+    }
+  });
+
+  // Both admins and regular users start at the campaign dashboard
+  dashboardView.classList.remove("hidden");
+  mainContent.classList.add("hidden");
+  adminTabs.classList.add("hidden");
+  backToDashboardBtn.classList.add("hidden");
+  statsSummaryBar.classList.add("hidden");
+  
+  // Clear hash and push dashboard state
+  window.history.replaceState({ page: "dashboard" }, "", "./");
 }
 
 function selectCampaign(name, skipPushHistory) {
@@ -673,28 +675,42 @@ function selectCampaign(name, skipPushHistory) {
   adminTabs.classList.toggle("hidden", !isAdm);
 
   if (isAdm) {
-    // Hide Thursday Calling and Calling Round tabs, activate Festival tab
+    // Show all tabs for admins
     document.querySelectorAll(".admin-tab").forEach(t => {
-      if (t.dataset.target === "admin-festival-section") {
-        t.style.display = "";
-        t.classList.remove("hidden");
-        t.classList.add("active");
-      } else {
-        t.style.display = "none";
-        t.classList.add("hidden");
-        t.classList.remove("active");
-      }
+      t.style.display = "";
+      t.classList.remove("hidden");
     });
 
-    masterSection.classList.add("hidden");
-    document.getElementById("calling-section").style.display = "none";
-    if (adminFestivalSection) adminFestivalSection.classList.remove("hidden");
-    if (assignedDataBtn) assignedDataBtn.classList.add("hidden");
+    document.querySelectorAll(".admin-tab").forEach(t => t.classList.remove("active"));
 
-    statsSummaryBar.classList.add("hidden");
-    saveAllBtn.classList.add("hidden");
-    assignBtn.classList.add("hidden");
-    if (adminMessageBtnCalling) adminMessageBtnCalling.classList.add("hidden");
+    if (name === "Festival Promotions") {
+      const festTab = document.querySelector('.admin-tab[data-target="admin-festival-section"]');
+      if (festTab) festTab.classList.add("active");
+
+      masterSection.classList.add("hidden");
+      document.getElementById("calling-section").style.display = "none";
+      if (adminFestivalSection) adminFestivalSection.classList.remove("hidden");
+      if (assignedDataBtn) assignedDataBtn.classList.add("hidden");
+
+      statsSummaryBar.classList.add("hidden");
+      saveAllBtn.classList.add("hidden");
+      assignBtn.classList.add("hidden");
+      if (adminMessageBtnCalling) adminMessageBtnCalling.classList.add("hidden");
+    } else {
+      const defaultTab = document.querySelector('.admin-tab[data-target="master-data-section"]');
+      if (defaultTab) defaultTab.classList.add("active");
+
+      masterSection.classList.remove("hidden");
+      document.getElementById("calling-section").style.display = "none";
+      if (adminFestivalSection) adminFestivalSection.classList.add("hidden");
+      if (assignedDataBtn) assignedDataBtn.classList.add("hidden");
+
+      statsSummaryBar.classList.add("hidden");
+      saveAllBtn.classList.remove("hidden");
+      saveAllBtn.disabled = true;
+      assignBtn.classList.remove("hidden");
+      if (adminMessageBtnCalling) adminMessageBtnCalling.classList.remove("hidden");
+    }
   } else {
     masterSection.classList.add("hidden");
     document.getElementById("calling-section").style.display = "";
