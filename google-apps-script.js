@@ -33,10 +33,10 @@ var SHEET_EVENT_ADMIN = "Event Admin";
 var SHEET_CALLING = "GIC Calling";
 var SHEET_FESTIVAL = "Special Events";
 
-var CACHE_KEY_CALLING = "calling_v10";
+var CACHE_KEY_CALLING = "calling_v11";
 var CACHE_KEY_USERS = "users_v4";
-var CACHE_KEY_SETUP = "setup_v16";
-var CACHE_KEY_VALIDATION = "validation_sig_v10";
+var CACHE_KEY_SETUP = "setup_v17";
+var CACHE_KEY_VALIDATION = "validation_sig_v11";
 var CACHE_SECONDS = 60;
 
 var WS_OPTIONS = ["W", "S", "NA"];
@@ -532,9 +532,10 @@ function applyValidations(doc, sheetName) {
     try {
       calling.getRange(2, COL_CALLS, maxRows - 1, 1).clearDataValidations();
       var formulas = [];
+      var startCol = (sheetName === SHEET_FESTIVAL) ? "I" : "H";
       for (var r = 2; r <= lastRow; r++) {
         formulas.push([
-          '=IF($A' + r + '="","",COUNTA($H' + r + ':' + r + ')-COUNTIF($H' + r + ':' + r + ',"Not Done"))'
+          '=IF($A' + r + '="","",COUNTA($' + startCol + r + ':' + r + ')-COUNTIF($' + startCol + r + ':' + r + ',"Not Done"))'
         ]);
       }
       calling.getRange(2, COL_CALLS, dataRows, 1).setFormulas(formulas);
@@ -896,33 +897,61 @@ function buildDataPayload(user, sheetName, campaignType, skipCache) {
     });
   }
 
-  // Calculate Thursday and Festival assigned counts for the currently logged-in user
+  // Calculate Thursday and Festival assigned, positive, and pending counts for the currently logged-in user
   var dbDoc = ensureSetup();
   var userName = user.name;
   
   var TCAssigned = 0;
+  var TCPositive = 0;
+  var TCPending = 0;
   var TCSheet = dbDoc.getSheetByName(SHEET_CALLING);
   if (TCSheet) {
     var TCLast = TCSheet.getLastRow();
     if (TCLast > 1) {
-      var TCValues = TCSheet.getRange(2, 7, TCLast - 1, 1).getValues();
+      var TCActive = getActiveDateColumn(TCSheet);
+      var TCCols = Math.max(TCSheet.getLastColumn(), 7);
+      var TCValues = TCSheet.getRange(2, 1, TCLast - 1, TCCols).getValues();
       for (var k = 0; k < TCValues.length; k++) {
-        if (String(TCValues[k][0]).trim() === userName) {
+        var assigned = String(TCValues[k][6]).trim(); // Column G (index 6)
+        if (assigned.toLowerCase() === userName.toLowerCase()) {
           TCAssigned++;
+          var status = "";
+          if (TCActive.activeCol !== -1) {
+            status = String(TCValues[k][TCActive.activeCol - 1]).trim().toLowerCase();
+          }
+          if (status === "joining the session" || status === "will try to attend") {
+            TCPositive++;
+          } else if (status === "not done" || status === "yet to call" || status === "") {
+            TCPending++;
+          }
         }
       }
     }
   }
 
   var FPAssigned = 0;
+  var FPPositive = 0;
+  var FPPending = 0;
   var FPSheet = dbDoc.getSheetByName(SHEET_FESTIVAL);
   if (FPSheet) {
     var FPLast = FPSheet.getLastRow();
     if (FPLast > 1) {
-      var FPValues = FPSheet.getRange(2, 7, FPLast - 1, 1).getValues();
+      var FPActive = getActiveDateColumn(FPSheet);
+      var FPCols = Math.max(FPSheet.getLastColumn(), 8);
+      var FPValues = FPSheet.getRange(2, 1, FPLast - 1, FPCols).getValues();
       for (var k = 0; k < FPValues.length; k++) {
-        if (String(FPValues[k][0]).trim() === userName) {
+        var assigned = String(FPValues[k][6]).trim(); // Column G (index 6)
+        if (assigned.toLowerCase() === userName.toLowerCase()) {
           FPAssigned++;
+          var status = "";
+          if (FPActive.activeCol !== -1) {
+            status = String(FPValues[k][FPActive.activeCol - 1]).trim().toLowerCase();
+          }
+          if (status === "joining the session" || status === "will try to attend") {
+            FPPositive++;
+          } else if (status === "not done" || status === "yet to call" || status === "") {
+            FPPending++;
+          }
         }
       }
     }
@@ -939,7 +968,10 @@ function buildDataPayload(user, sheetName, campaignType, skipCache) {
     festivals: getFestivals(),
     settings: getSettings(),
     thursdayAssigned: TCAssigned,
-    festivalAssigned: FPAssigned
+    festivalAssigned: FPAssigned,
+    totalContacts: TCAssigned + FPAssigned,
+    totalPositive: TCPositive + FPPositive,
+    totalPending: TCPending + FPPending
   };
 
   if (user.role === ROLE_ADMIN) {

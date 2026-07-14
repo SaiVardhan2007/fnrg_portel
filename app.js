@@ -518,7 +518,12 @@ async function api(params, postBody) {
 
 // Applies a successful login/data/save payload to local state
 function applyPayload(data) {
-  if (data.user) currentUser = data.user;
+  if (data.user) {
+    currentUser = data.user;
+    if (data.totalContacts !== undefined) currentUser.totalContacts = data.totalContacts;
+    if (data.totalPositive !== undefined) currentUser.totalPositive = data.totalPositive;
+    if (data.totalPending !== undefined) currentUser.totalPending = data.totalPending;
+  }
   contacts = data.contacts || [];
   if (Array.isArray(data.wsOptions) && data.wsOptions.length) wsOptions = data.wsOptions;
   if (Array.isArray(data.statusOptions) && data.statusOptions.length) statusOptions = data.statusOptions;
@@ -540,6 +545,12 @@ function updateHeaderStats() {
   const festivalStatEl = document.getElementById("user-stat-festival");
   if (thursdayStatEl) thursdayStatEl.textContent = userThursdayAssigned;
   if (festivalStatEl) festivalStatEl.textContent = userFestivalAssigned;
+
+  if (!isAdmin() && activeCampaign === "") {
+    if (statTotal) statTotal.textContent = (currentUser && currentUser.totalContacts !== undefined) ? currentUser.totalContacts : 0;
+    if (statPositive) statPositive.textContent = (currentUser && currentUser.totalPositive !== undefined) ? currentUser.totalPositive : 0;
+    if (statPending) statPending.textContent = (currentUser && currentUser.totalPending !== undefined) ? currentUser.totalPending : 0;
+  }
 }
 
 // ============================================================
@@ -639,7 +650,7 @@ function showApp() {
   mainContent.classList.add("hidden");
   adminTabs.classList.add("hidden");
   backToDashboardBtn.classList.add("hidden");
-  statsSummaryBar.classList.add("hidden");
+  statsSummaryBar.classList.remove("hidden");
 
   // Clear hash and push dashboard state
   window.history.replaceState({ page: "dashboard" }, "", "./");
@@ -766,6 +777,7 @@ function selectCampaign(name, skipPushHistory) {
 }
 
 function returnToDashboard(skipPushHistory) {
+  activeCampaign = "";
   contacts = [];
   dirtyContacts.clear();
   saveAllBtn.disabled = true;
@@ -778,7 +790,13 @@ function returnToDashboard(skipPushHistory) {
   adminTabs.classList.add("hidden");
   backToDashboardBtn.classList.add("hidden");
   dashboardView.classList.remove("hidden");
-  statsSummaryBar.classList.add("hidden");
+  
+  if (!isAdmin()) {
+    statsSummaryBar.classList.remove("hidden");
+  } else {
+    statsSummaryBar.classList.add("hidden");
+  }
+
   if (campaignPosterBanner) campaignPosterBanner.classList.add("hidden");
 
   if (receptionSection) receptionSection.classList.add("hidden");
@@ -787,6 +805,7 @@ function returnToDashboard(skipPushHistory) {
   if (!skipPushHistory && !isAdmin()) {
     window.history.pushState({ page: "dashboard" }, "", "./");
   }
+  updateHeaderStats();
 }
 
 // ============================================================
@@ -1022,7 +1041,9 @@ function createContactRow(contact, isMasterTable, isCultivation, serialNumber) {
   sessionsTd.className = "cell-readonly-num cell-sessions";
   sessionsTd.dataset.label = "Sessions";
   sessionsTd.textContent = contact.sessions;
-  sessionsTd.addEventListener("click", () => showSessionHistoryModal(contact));
+  if (!isAdmin()) {
+    sessionsTd.classList.add("hidden");
+  }
   tr.appendChild(sessionsTd);
 
   // 5. No. of Calls (Clickable to open modal popup)
@@ -1341,8 +1362,12 @@ function renderContacts() {
   const titleEl = document.getElementById("calling-page-title");
   if (titleEl) {
     let displayName = activeCampaign;
-    if (activeCampaign === "Special Events" && !isAdmin() && currentUser && currentUser.festival) {
-      displayName = currentUser.festival;
+    if (activeCampaign === "Special Events" && !isAdmin()) {
+      if (contacts.length > 0 && contacts[0].event) {
+        displayName = contacts[0].event;
+      } else if (currentUser && currentUser.festival) {
+        displayName = currentUser.festival;
+      }
     }
     if (activeCampaign === "Special Events") {
       titleEl.innerHTML = displayName + ' <span id="active-date" class="active-date"></span>';

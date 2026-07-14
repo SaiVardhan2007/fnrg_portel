@@ -1,21 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --teal: #0284c7; /* Peacock Blue (Ghanshyam) */
-  --teal-dark: #0369a1;
-  --teal-soft: #e0f2fe;
-  --indigo: #312e81; /* Royal Purple / Temple Indigo */
-  --bg: #fdfaf2; /* Sandalwood / Jasmine Cream */
+  --teal: #047857; /* Tulsi Green */
+  --teal-dark: #065f46; /* Deep Forest Green */
+  --teal-soft: #d1fae5; /* Soft Sage Green */
+  --indigo: #b45309; /* Warm Pitambara Saffron */
+  --bg: #fefbf3; /* Sandalwood/Jasmine Cream background */
   --card: #ffffff;
-  --border: #f2ebd9; /* Temple Stone Border */
-  --text: #292524; /* Stone Charcoal */
-  --text-muted: #78716c; /* Stone Muted */
+  --border: #e6dfcd; /* Temple Stone Border */
+  --text: #292524;
+  --text-muted: #78716c;
   --red: #ef4444;
   --green: #10b981;
   --amber: #ca8a04; /* Marigold/Pitambara Yellow */
-  --saffron: #f97316; /* Saffron Accent */
+  --saffron: #d97706; /* Saffron Accent */
   --radius: 16px;
   --shadow: 0 1px 3px rgba(120, 113, 108, 0.04), 0 10px 30px rgba(120, 113, 108, 0.08);
+  --shadow-sm: 0 2px 8px rgba(6, 95, 70, 0.04);
   --font: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -44,8 +45,8 @@ body {
   justify-content: center;
   padding: 20px;
   background:
-    radial-gradient(600px 300px at 15% 0%, rgba(2, 132, 199, 0.08), transparent),
-    radial-gradient(500px 300px at 90% 100%, rgba(249, 115, 22, 0.07), transparent),
+    radial-gradient(600px 300px at 15% 0%, rgba(4, 120, 87, 0.08), transparent),
+    radial-gradient(500px 300px at 90% 100%, rgba(217, 119, 6, 0.07), transparent),
     var(--bg);
 }
 
@@ -624,30 +625,31 @@ body {
     border-radius: 12px;
   }
 
-  /* --- 3-row grid card --- */
+  /* --- Krishna-themed 2-row grid card --- */
   .contacts-table tbody tr:not(.loading-row) {
     display: grid;
-    grid-template-columns: 3fr 1fr 2fr 2fr;
+    grid-template-columns: 1fr auto minmax(130px, 40%);
     grid-template-areas:
-      "name     name     sessions calls"
-      "ws       status   status   status"
-      "phone    actions  actions  actions";
+      "name     ws       status"
+      "calls    phone    actions";
     column-gap: 8px;
-    row-gap: 10px;
+    row-gap: 12px;
     align-items: center;
     background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
-    padding: 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 4px 10px rgba(6, 95, 70, 0.02);
+    padding: 16px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
 
   /* Admin: 3 dropdowns share row 2 */
   .contacts-table tbody tr.with-assigned {
+    grid-template-columns: 1fr auto auto;
     grid-template-areas:
-      "name     name     sessions calls"
-      "ws       status   status   assigned"
-      "phone    actions  actions  actions";
+      "name     sessions calls"
+      "ws       status   assigned"
+      "phone    actions  actions";
   }
 
   .contacts-table tbody tr:hover { background: var(--card); }
@@ -658,6 +660,8 @@ body {
     grid-area: name;
     min-width: 0;
     overflow: hidden;
+    justify-self: start;
+    text-align: left;
   }
 
   .cell-name .name-display {
@@ -700,7 +704,7 @@ body {
 
   .cell-calls {
     grid-area: calls;
-    justify-self: end;
+    justify-self: start;
     display: flex;
     align-items: center;
     gap: 2px;
@@ -730,14 +734,15 @@ body {
   /* ──── Row 2: W/S  Status  (Assigned) ──── */
   .cell-ws {
     grid-area: ws;
+    justify-self: end;
   }
 
   .cell-ws .ws-select {
     font-size: 12px;
-    padding: 6px 20px 6px 8px;
+    padding: 5px 16px 5px 6px;
     border-radius: 8px;
-    min-width: 58px;
-    background-position: right 6px center;
+    min-width: 48px;
+    background-position: right 4px center;
   }
 
   .cell-ws[data-label]::before { display: none; }
@@ -745,6 +750,8 @@ body {
   .cell-status {
     grid-area: status;
     min-width: 0;
+    width: 100%;
+    justify-self: end;
   }
 
   .cell-status[data-label]::before { display: none; }
@@ -778,6 +785,7 @@ body {
   .cell-phone {
     grid-area: phone;
     min-width: 0;
+    justify-self: start;
   }
 
   .cell-phone a {
@@ -806,9 +814,10 @@ body {
     grid-area: actions;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     justify-content: flex-end;
     white-space: nowrap;
+    justify-self: end;
   }
 
   .cell-actions .row-submit-btn,
@@ -1206,34 +1215,39 @@ body.pulling #app-view {
 .dashboard-card {
   background: var(--card);
   border: 1.5px solid var(--border);
-  border-radius: 14px;
-  padding: 12px 20px;
+  border-radius: 18px;
+  padding: 20px 24px;
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: auto auto;
   align-items: center;
-  column-gap: 16px;
-  row-gap: 2px;
+  column-gap: 18px;
+  row-gap: 4px;
   text-align: left;
   cursor: pointer;
-  box-shadow: var(--shadow);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(6, 95, 70, 0.03);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .dashboard-card.disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   pointer-events: none;
   cursor: not-allowed;
-  filter: grayscale(0.9);
+  filter: grayscale(0.85);
   box-shadow: none;
-  border-color: var(--border-light, #e2e8f0);
+  border-color: var(--border);
 }
 
 .dashboard-card:not(.disabled):hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px) scale(1.02);
   border-color: var(--teal);
-  background: #f8fafc;
-  box-shadow: 0 6px 14px rgba(2, 132, 199, 0.05);
+  background: #f0fdf4; /* Soft Tulsi Green background */
+  box-shadow: 0 12px 24px rgba(6, 95, 70, 0.08);
+}
+
+.dashboard-card:not(.disabled):active {
+  transform: translateY(-1px) scale(0.99);
+  box-shadow: 0 4px 8px rgba(6, 95, 70, 0.04);
 }
 
 .card-icon {
