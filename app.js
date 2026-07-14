@@ -696,6 +696,8 @@ function selectCampaign(name, skipPushHistory) {
       saveAllBtn.classList.add("hidden");
       assignBtn.classList.add("hidden");
       if (adminMessageBtnCalling) adminMessageBtnCalling.classList.add("hidden");
+
+      loadAdminFestivalData(); // Fetch and render admin festival data!
     } else {
       const defaultTab = document.querySelector('.admin-tab[data-target="master-data-section"]');
       if (defaultTab) defaultTab.classList.add("active");
@@ -1443,6 +1445,14 @@ async function submitRow(contact, tr, controls, btn) {
 
 async function refreshContacts() {
   refreshBtn.classList.add("spinning");
+  
+  if (activeCampaign === "Festival Promotions" && isAdmin()) {
+    await loadAdminFestivalData();
+    refreshBtn.classList.remove("spinning");
+    setSyncStatus("Up to date", "saved");
+    return;
+  }
+
   const data = await api({
     action: "data",
     phone: currentUser.phone,
