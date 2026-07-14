@@ -2036,3 +2036,9 @@ function saveSettingImage(key, base64Data, mimeType, fileName) {
 
   return directUrl;
 }
+
+function testDriveAccess() {
+  Logger.log("Testing Google Drive access...");
+  var root = DriveApp.getRootFolder();
+  Logger.log("Access successful! Root folder name: " + root.getName());
+}
