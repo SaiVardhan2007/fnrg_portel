@@ -390,8 +390,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".dashboard-card").forEach(card => {
     card.addEventListener("click", () => {
       if (card.classList.contains("disabled")) return;
-      const campaign = card.dataset.campaign;
-      selectCampaign(campaign);
+      card.classList.add("clicked");
+      setTimeout(() => {
+        card.classList.remove("clicked");
+        const campaign = card.dataset.campaign;
+        selectCampaign(campaign);
+      }, 200);
     });
   });
 
