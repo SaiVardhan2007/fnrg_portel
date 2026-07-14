@@ -24,7 +24,8 @@ let wsOptions = ["W", "S", "NA"];
 let statusOptions = [STATUS_DEFAULT, STATUS_OTHERS];
 let activeDate = "";      // name of the sheet's last date column, e.g. "Jul 11"
 let userNames = [];       // admin only: names for the Assigned To / Cultivated By dropdowns
-let userLimits = {};      // admin only: name -> call limit mapping
+let userLimits = {};      // admin only: name -> call limit mapping (Thursday)
+let userFestLimits = {};  // admin only: name -> festival call limit mapping
 let registeredUserPhones = []; // admin only: list of registered user phone numbers to avoid assigning to
 let dirtyContacts = new Set(); // set of phones with staged updates for bulk save
 let activeCampaign = "Thursday Calling"; // default active campaign
@@ -245,7 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (messageTemplateInput) {
       messageTemplateInput.value = settings[type] || "";
     }
-    
+
     // Preview existing poster if configured
     const posterKey = type === "festival_message" ? "festival_poster" : "calling_poster";
     const currentPosterUrl = (settings && settings[posterKey]) || "";
@@ -295,7 +296,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function saveMessageTemplate() {
     if (!currentMessageKey) return;
     const inputVal = messageTemplateInput.value.trim();
-    
+
     saveMessageBtn.classList.add("busy");
     saveMessageBtn.disabled = true;
     if (messageModalError) messageModalError.textContent = "";
@@ -474,10 +475,10 @@ async function api(params, postBody) {
   const url = API_URL + "?" + new URLSearchParams(queryParams).toString();
   const options = postBody
     ? {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(postBody)
-      }
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(postBody)
+    }
     : { method: "GET" };
 
   try {
@@ -510,6 +511,7 @@ function applyPayload(data) {
   if (typeof data.activeDate === "string") activeDate = data.activeDate;
   if (Array.isArray(data.userNames)) userNames = data.userNames;
   if (data.userLimits) userLimits = data.userLimits;
+  if (data.userFestLimits) userFestLimits = data.userFestLimits;
   if (Array.isArray(data.userPhones)) registeredUserPhones = data.userPhones;
   if (data.settings) settings = data.settings;
 }
@@ -604,14 +606,14 @@ function showApp() {
   adminTabs.classList.add("hidden");
   backToDashboardBtn.classList.add("hidden");
   statsSummaryBar.classList.add("hidden");
-  
+
   // Clear hash and push dashboard state
   window.history.replaceState({ page: "dashboard" }, "", "./");
 }
 
 function selectCampaign(name, skipPushHistory) {
   activeCampaign = name;
-  
+
   // Update campaign title head immediately
   const titleEl = document.getElementById("calling-page-title");
   if (titleEl) {
@@ -717,7 +719,7 @@ function selectCampaign(name, skipPushHistory) {
     masterSection.classList.add("hidden");
     document.getElementById("calling-section").style.display = "";
     statsSummaryBar.classList.remove("hidden");
-    
+
     saveAllBtn.classList.add("hidden");
     assignBtn.classList.add("hidden");
     if (adminMessageBtnCalling) adminMessageBtnCalling.classList.add("hidden");
@@ -999,7 +1001,7 @@ function createContactRow(contact, isMasterTable, isCultivation) {
     emptyOpt.value = "";
     emptyOpt.textContent = "— Select Event —";
     eventSelect.appendChild(emptyOpt);
-    
+
     (loadedFestivals || []).forEach(f => {
       const opt = document.createElement("option");
       opt.value = f;
@@ -1014,7 +1016,7 @@ function createContactRow(contact, isMasterTable, isCultivation) {
       customOpt.selected = true;
       eventSelect.appendChild(customOpt);
     }
-    
+
     eventSelect.addEventListener("change", () => {
       contact.event = eventSelect.value;
       markDirty();
@@ -1156,7 +1158,7 @@ function createContactRow(contact, isMasterTable, isCultivation) {
         orphan.selected = true;
         assignSelect.appendChild(orphan);
       }
-      
+
       const updateAssignedStyle = () => {
         if (assignSelect.value !== "") {
           tr.classList.add("row-assigned");
@@ -1217,7 +1219,7 @@ function createContactRow(contact, isMasterTable, isCultivation) {
     // 8. Actions (Send to + Submit)
     const actionsTd = document.createElement("td");
     actionsTd.className = "cell-actions";
-    
+
     if (!isAdmin()) {
       const sendBtn = document.createElement("button");
       sendBtn.type = "button";
@@ -1238,7 +1240,7 @@ function createContactRow(contact, isMasterTable, isCultivation) {
       submitBtn.addEventListener("click", () => submitRow(contact, tr, controls, submitBtn));
       actionsTd.appendChild(submitBtn);
     }
-    
+
     tr.appendChild(actionsTd);
   }
 
@@ -1409,7 +1411,7 @@ async function submitRow(contact, tr, controls, btn) {
         contact.calls = fresh.calls;
         controls.callsTd.textContent = fresh.calls;
       }
-      
+
       // Sync master table row if visible
       const masterRow = document.querySelector(`#master-contacts-body tr[data-phone="${contact.phone}"]`);
       if (masterRow) {
@@ -1445,7 +1447,7 @@ async function submitRow(contact, tr, controls, btn) {
 
 async function refreshContacts() {
   refreshBtn.classList.add("spinning");
-  
+
   if (activeCampaign === "Festival Promotions" && isAdmin()) {
     await loadAdminFestivalData();
     refreshBtn.classList.remove("spinning");
@@ -1488,7 +1490,7 @@ function formatTime12h(ts) {
   if (!ts) return "—";
   const date = new Date(ts);
   if (isNaN(date.getTime())) return ts;
-  
+
   let hours = date.getHours();
   const minutes = String(date.getMinutes()).padStart(2, "0");
   const ampm = hours >= 12 ? "pm" : "am";
@@ -1505,14 +1507,14 @@ function formatDateAndTime12h(ts) {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const day = date.getDate();
   const month = months[date.getMonth()];
-  
+
   let hours = date.getHours();
   const minutes = String(date.getMinutes()).padStart(2, "0");
   const ampm = hours >= 12 ? "pm" : "am";
   hours = hours % 12;
   hours = hours ? hours : 12;
   const timeStr = String(hours).padStart(2, "0") + ":" + minutes + " " + ampm;
-  
+
   return day + " " + month + ", " + timeStr;
 }
 
@@ -1967,7 +1969,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       pullIndicator.style.transform = `translateY(${indicatorY}px)`;
       pullIndicator.style.opacity = String(appViewY / 50);
-      
+
       const appViewEl = document.getElementById("app-view");
       if (appViewEl) {
         appViewEl.style.transform = `translateY(${appViewY}px)`;
@@ -1991,9 +1993,9 @@ document.addEventListener("DOMContentLoaded", () => {
       pullIndicator.style.opacity = "1";
       const appViewEl = document.getElementById("app-view");
       if (appViewEl) appViewEl.style.transform = "translateY(50px)";
-      
+
       await refreshContacts();
-      
+
       pullIndicator.innerHTML = '<span class="btn-spinner dark"></span> Release to refresh…';
       resetPull();
     } else {
@@ -2019,7 +2021,7 @@ let lastSearchedContact = null;
 function setupReception() {
   receptionSearch.addEventListener("input", () => {
     receptionSearch.value = receptionSearch.value.replace(/\D/g, "").slice(0, 10);
-    
+
     receptionResult.classList.add("hidden");
     receptionNotFound.classList.add("hidden");
     lastSearchedContact = null;
@@ -2234,10 +2236,10 @@ async function submitAddPersonForm() {
     if (data.status === "success") {
       showToast("Registered & marked attendance for " + name + "!", "success");
       closeAddPersonModal();
-      
+
       // Save to Reception local storage marked attendance list
       saveReceptionAttendanceLocally(name, phone, sessionName);
-      
+
       // Trigger search automatically to show registered details
       receptionSearch.value = phone;
       searchReceptionContact(phone);
@@ -2367,10 +2369,55 @@ function openAssignedDataModal() {
 
   userNames.forEach(name => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${escapeHtml(name)}</td>
-      <td style="font-weight:600; text-align:center;">${counts[name]}</td>
-    `;
+
+    const nameTd = document.createElement("td");
+    nameTd.textContent = name;
+
+    const countTd = document.createElement("td");
+    countTd.style.fontWeight = "600";
+    countTd.style.textAlign = "center";
+    countTd.textContent = counts[name];
+
+    const limitTd = document.createElement("td");
+    limitTd.style.textAlign = "center";
+
+    const limitInput = document.createElement("input");
+    limitInput.type = "number";
+    limitInput.className = "status-select";
+    limitInput.style.width = "65px";
+    limitInput.style.padding = "4px 8px";
+    limitInput.style.fontSize = "12px";
+    limitInput.style.margin = "0";
+    limitInput.placeholder = "No Limit";
+    limitInput.value = userLimits[name] !== undefined ? userLimits[name] : "";
+
+    limitInput.addEventListener("change", async () => {
+      limitInput.disabled = true;
+      const newLimit = limitInput.value.trim();
+      const response = await api(null, {
+        action: "updateUserLimit",
+        requesterPhone: currentUser.phone,
+        username: name,
+        limit: newLimit === "" ? "" : parseInt(newLimit, 10),
+        campaignType: "calling"
+      });
+      limitInput.disabled = false;
+      if (response.status === "success") {
+        showToast(`Thursday limit for ${name} updated to: ${newLimit || "No Limit"}`, "success");
+        if (response.userLimits) {
+          userLimits = response.userLimits;
+        }
+      } else {
+        showToast("Error updating limit: " + response.message, "error");
+        limitInput.value = userLimits[name] !== undefined ? userLimits[name] : "";
+      }
+    });
+
+    limitTd.appendChild(limitInput);
+
+    tr.appendChild(nameTd);
+    tr.appendChild(countTd);
+    tr.appendChild(limitTd);
     assignedDataBody.appendChild(tr);
   });
 
@@ -2420,13 +2467,13 @@ function handleFileImport(e) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(evt) {
+  reader.onload = function (evt) {
     try {
       const data = evt.target.result;
       const workbook = XLSX.read(data, { type: 'binary' });
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
-      
+
       // Convert to JSON array of arrays (including headers)
       const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
       if (rows.length === 0) {
@@ -2439,10 +2486,10 @@ function handleFileImport(e) {
 
       // Populate column mapping selectors
       populateMappingSelectors(excelHeaders);
-      
+
       // Show mapping modal
       importMappingModal.classList.add("active");
-    } catch(err) {
+    } catch (err) {
       showToast("Failed to read Excel file: " + err.message, "error");
     }
   };
@@ -2565,10 +2612,12 @@ async function loadAdminFestivalData() {
     return;
   }
 
-  applyPayload(response);
   loadedFestivals = response.festivals || [];
   populateFestivalFilter();
-  populateAutoAssignUsers(userNames, response.autoAssignUsers || [], response.autoAssignUserFestivals || {});
+  populateAutoAssignUsers(response.userNames || [], response.autoAssignUsers || [], response.autoAssignUserFestivals || {});
+
+  contacts = response.contacts || [];
+  userNames = response.userNames || [];
   renderAdminFestivalContacts();
 }
 
@@ -2684,7 +2733,7 @@ function populateAutoAssignUsers(allUsers, selectedUsers, selectedUserFestivals)
     limitInput.style.fontSize = "12px";
     limitInput.style.margin = "0";
     limitInput.placeholder = "No Limit";
-    limitInput.value = userLimits[u] !== undefined ? userLimits[u] : "";
+    limitInput.value = userFestLimits[u] !== undefined ? userFestLimits[u] : "";
 
     limitInput.addEventListener("change", async () => {
       limitInput.disabled = true;
@@ -2693,13 +2742,14 @@ function populateAutoAssignUsers(allUsers, selectedUsers, selectedUserFestivals)
         action: "updateUserLimit",
         requesterPhone: currentUser.phone,
         username: u,
-        limit: newLimit === "" ? "" : parseInt(newLimit, 10)
+        limit: newLimit === "" ? "" : parseInt(newLimit, 10),
+        campaignType: "festival"
       });
       limitInput.disabled = false;
       if (response.status === "success") {
-        showToast(`Call limit for ${u} updated to: ${newLimit || "No Limit"}`, "success");
-        if (response.userLimits) {
-          userLimits = response.userLimits;
+        showToast(`Festival limit for ${u} updated to: ${newLimit || "No Limit"}`, "success");
+        if (response.userFestLimits) {
+          userFestLimits = response.userFestLimits;
         }
         if (response.contacts) contacts = response.contacts;
         if (response.userNames) userNames = response.userNames;
@@ -2708,7 +2758,7 @@ function populateAutoAssignUsers(allUsers, selectedUsers, selectedUserFestivals)
         renderAdminFestivalContacts();
       } else {
         showToast("Error updating limit: " + response.message, "error");
-        limitInput.value = userLimits[u] !== undefined ? userLimits[u] : "";
+        limitInput.value = userFestLimits[u] !== undefined ? userFestLimits[u] : "";
       }
     });
 
@@ -3002,10 +3052,10 @@ let backgroundPollInterval = null;
 
 function startBackgroundPolling() {
   if (backgroundPollInterval) clearInterval(backgroundPollInterval);
-  
+
   backgroundPollInterval = setInterval(async () => {
     if (!currentUser || document.hidden || activeCampaign === "") return;
-    
+
     // Silent API refresh
     const response = await api({
       action: "data",
@@ -3018,14 +3068,14 @@ function startBackgroundPolling() {
     if (response && response.status === "success") {
       try {
         localStorage.setItem(getCacheKey(activeCampaign), JSON.stringify(response));
-      } catch(e) {}
-      
+      } catch (e) { }
+
       // Update loaded data silently if there are no unsaved input changes
       if (dirtyContacts.size === 0) {
         contacts = response.contacts || [];
         userNames = response.userNames || [];
         loadedFestivals = response.festivals || [];
-        
+
         if (activeCampaign === "Festival Promotions" && isAdmin()) {
           const currentFilter = adminFestivalFilter ? adminFestivalFilter.value : "ALL";
           populateFestivalFilter();

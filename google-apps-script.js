@@ -163,11 +163,12 @@ function ensureSetup() {
   var users = doc.getSheetByName(SHEET_USERS);
   if (!users) {
     users = doc.insertSheet(SHEET_USERS);
-    try { users.getRange(1, 1, 1, 9).setValues([["Name", "Phone Number", "Role", "Call Limit", "Auto Assign", "Festival", "From Date", "To Date", "Festival Assigned"]]); } catch(e){}
-    try { styleHeader(users.getRange(1, 1, 1, 9), "#0f766e"); } catch(e){}
+    try { users.getRange(1, 1, 1, 10).setValues([["Name", "Phone Number", "Role", "Call Limit", "Auto Assign", "Festival", "From Date", "To Date", "Festival Assigned", "Festival Limit"]]); } catch(e){}
+    try { styleHeader(users.getRange(1, 1, 1, 10), "#0f766e"); } catch(e){}
     try { users.setFrozenRows(1); } catch(e){}
     try { users.getRange(2, 2, 1000, 1).setNumberFormat("@"); } catch(e){}
     try { users.getRange(2, 4, 1000, 1).setNumberFormat("#"); } catch(e){}
+    try { users.getRange(2, 10, 1000, 1).setNumberFormat("#"); } catch(e){}
     try { users.getRange(2, 1, SAMPLE_USERS.length, 3).setValues(SAMPLE_USERS); } catch(e){}
   } else {
     try {
@@ -233,6 +234,15 @@ function ensureSetup() {
       if (festAssignedHeader !== "Festival Assigned") {
         users.getRange(1, 9).setValue("Festival Assigned");
         try { styleHeader(users.getRange(1, 9), "#0f766e"); } catch(e){}
+      }
+    } catch(e){}
+    try {
+      // Migrate: check J header is Festival Limit
+      var festLimitHeader = String(users.getRange(1, 10).getValue()).trim();
+      if (festLimitHeader !== "Festival Limit") {
+        users.getRange(1, 10).setValue("Festival Limit");
+        try { styleHeader(users.getRange(1, 10), "#0f766e"); } catch(e){}
+        try { users.getRange(2, 10, 1000, 1).setNumberFormat("#"); } catch(e){}
       }
     } catch(e){}
     try {
@@ -590,7 +600,7 @@ function getUsers(skipCache) {
   var result = [];
 
   if (lastRow > 1) {
-    var values = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+    var values = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
     for (var i = 0; i < values.length; i++) {
       var name = String(values[i][0]).trim();
       var phone = normalizePhone(values[i][1]);
@@ -602,13 +612,16 @@ function getUsers(skipCache) {
       var limitVal = (isNaN(limit) || values[i][3] === "") ? 999 : limit;
       var autoAssign = String(values[i][4] || "").trim().toLowerCase() === "yes";
       var festival = String(values[i][5] || "").trim();
+      var festLimit = Number(values[i][9]); // Column J is index 9
+      var festLimitVal = (isNaN(festLimit) || values[i][9] === "") ? 999 : festLimit;
       result.push({ 
         name: name, 
         phone: phone, 
         role: role, 
         limit: limitVal, 
         autoAssign: autoAssign,
-        festival: festival
+        festival: festival,
+        festLimit: festLimitVal
       });
     }
   }
@@ -857,6 +870,7 @@ function buildDataPayload(user, sheetName, campaignType, skipCache) {
     var allUsers = getUsers(false);
     payload.userNames = allUsers.map(function (u) { return u.name; });
     payload.userLimits = allUsers.reduce(function (acc, u) { acc[u.name] = u.limit; return acc; }, {});
+    payload.userFestLimits = allUsers.reduce(function (acc, u) { acc[u.name] = u.festLimit; return acc; }, {});
     payload.userPhones = allUsers.map(function (u) { return normalizePhone(u.phone); });
 
     // Auto-assign state for Festival Promotions admin panel
@@ -1317,11 +1331,12 @@ function doPost(e) {
         var doc = ensureSetup();
         var sheet = doc.getSheetByName(SHEET_USERS);
         var lastRow = sheet.getLastRow();
+        var colIndex = (body.campaignType === "festival") ? 10 : 4;
         if (lastRow > 1) {
           var names = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
           for (var i = 0; i < names.length; i++) {
             if (String(names[i][0]).trim() === targetUser) {
-              sheet.getRange(i + 2, 4).setValue(limitVal); // Column D is 4 (Call Limit)
+              sheet.getRange(i + 2, colIndex).setValue(limitVal);
               break;
             }
           }
@@ -1762,7 +1777,7 @@ function runAutoAssignment() {
         // Filter eligible users who match this contact's event and haven't hit their call limit
         var eligibleUsers = [];
         activeAssignees.forEach(function(u) {
-          var userLimit = u.limit || 999;
+          var userLimit = u.festLimit || 999;
           var currentCount = userCounts[u.name] || 0;
           if (currentCount < userLimit) {
             // A user is eligible if they are assigned to this event specifically, or if their festival filter is blank/All

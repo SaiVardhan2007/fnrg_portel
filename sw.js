@@ -4,7 +4,7 @@
  * API calls (script.google.com): network-only, never cached.
  */
 
-const CACHE_NAME = "fnrg-portal-v34";
+const CACHE_NAME = "fnrg-portal-v35";
 const APP_SHELL = [
   "./",
   "./index.html",
