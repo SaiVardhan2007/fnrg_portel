@@ -944,15 +944,16 @@ function buildDataPayload(user, sheetName, campaignType, skipCache) {
 
   if (user.role === ROLE_ADMIN) {
     var allUsers = getUsers(false);
-    payload.userNames = allUsers.map(function (u) { return u.name; });
-    payload.userLimits = allUsers.reduce(function (acc, u) { acc[u.name] = u.limit; return acc; }, {});
-    payload.userFestLimits = allUsers.reduce(function (acc, u) { acc[u.name] = u.festLimit; return acc; }, {});
-    payload.userPhones = allUsers.map(function (u) { return normalizePhone(u.phone); });
+    var nonAdminUsers = allUsers.filter(function(u) { return u.role !== ROLE_ADMIN; });
+    payload.userNames = nonAdminUsers.map(function (u) { return u.name; });
+    payload.userLimits = nonAdminUsers.reduce(function (acc, u) { acc[u.name] = u.limit; return acc; }, {});
+    payload.userFestLimits = nonAdminUsers.reduce(function (acc, u) { acc[u.name] = u.festLimit; return acc; }, {});
+    payload.userPhones = nonAdminUsers.map(function (u) { return normalizePhone(u.phone); });
 
     // Calculate Thursday and Festival assigned counts for all callers (for the Admin Festival Promotions user details list)
     var allTCAssigned = {};
     var allFPAssigned = {};
-    allUsers.forEach(function(u) {
+    nonAdminUsers.forEach(function(u) {
       allTCAssigned[u.name] = 0;
       allFPAssigned[u.name] = 0;
     });
@@ -1826,7 +1827,7 @@ function getCurrentFestival() {
 
 function runAutoAssignment() {
   var allUsers = getUsers(false);
-  var activeAssignees = allUsers.filter(function(u) { return u.festAutoAssign; });
+  var activeAssignees = allUsers.filter(function(u) { return u.festAutoAssign && u.role !== ROLE_ADMIN; });
   if (activeAssignees.length === 0) return;
 
   var userPhones = {};

@@ -198,6 +198,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Assigned Data click events
   if (assignedDataBtn) assignedDataBtn.addEventListener("click", openAssignedDataModal);
+  const assignedDataBtnFestival = document.getElementById("assigned-data-btn-festival");
+  if (assignedDataBtnFestival) assignedDataBtnFestival.addEventListener("click", openAssignedDataModal);
   if (assignedDataClose) {
     assignedDataClose.addEventListener("click", () => assignedDataModal.classList.remove("active"));
   }
@@ -832,9 +834,20 @@ function closeOthersModal() {
 // Thursday Calling — render
 // ====================================================// ============ Dynamic Row Render Helper ============
 
-function createContactRow(contact, isMasterTable, isCultivation) {
+function createContactRow(contact, isMasterTable, isCultivation, serialNumber) {
   const tr = document.createElement("tr");
   tr.dataset.phone = contact.phone; // save key for lookup
+  
+  if (serialNumber !== undefined && serialNumber !== null) {
+    const snoTd = document.createElement("td");
+    snoTd.style.fontWeight = "600";
+    snoTd.style.color = "var(--text-muted)";
+    snoTd.style.textAlign = "center";
+    snoTd.style.fontSize = "13px";
+    snoTd.textContent = serialNumber;
+    tr.appendChild(snoTd);
+  }
+
   const controls = {};
 
   const submitBtn = document.createElement("button");
@@ -1344,8 +1357,8 @@ function renderContacts() {
     if (!contacts.length) {
       masterContactsBody.innerHTML = '<tr><td colspan="7" class="loading-row">No master contacts found.</td></tr>';
     } else {
-      contacts.forEach(contact => {
-        const row = createContactRow(contact, true);
+      contacts.forEach((contact, idx) => {
+        const row = createContactRow(contact, true, false, idx + 1);
         masterContactsBody.appendChild(row);
       });
     }
@@ -1356,7 +1369,7 @@ function renderContacts() {
 
   // Header row setup (Assigned To column depends on Admin)
   contactsHead.innerHTML = "";
-  const headers = ["Name", "Phone Number", "W/S", "Sessions", "No. of Calls"];
+  const headers = ["S.No", "Name", "Phone Number", "W/S", "Sessions", "No. of Calls"];
   if (activeCampaign === "Special Events" && isAdmin()) {
     headers.push("Event");
   }
@@ -1380,8 +1393,8 @@ function renderContacts() {
     return;
   }
 
-  contacts.forEach((contact) => {
-    const row = createContactRow(contact, false);
+  contacts.forEach((contact, idx) => {
+    const row = createContactRow(contact, false, false, idx + 1);
     contactsBody.appendChild(row);
   });
 }
@@ -2152,7 +2165,7 @@ async function loadCultivationContacts() {
   const cultivationHead = cultivationTable.querySelector("thead tr");
   if (cultivationHead) {
     cultivationHead.innerHTML = "";
-    const headers = ["Name", "Phone Number", "W/S", "Sessions", "No. of Calls", "Calling Status", ""];
+    const headers = ["S.No", "Name", "Phone Number", "W/S", "Sessions", "No. of Calls", "Calling Status", ""];
     headers.forEach((label) => {
       const th = document.createElement("th");
       th.textContent = label;
@@ -2171,8 +2184,8 @@ async function loadCultivationContacts() {
   cultivationEmpty.classList.add("hidden");
   cultivationTable.classList.remove("hidden");
 
-  allContacts.forEach(c => {
-    const row = createContactRow(c, false, true);
+  allContacts.forEach((c, idx) => {
+    const row = createContactRow(c, false, true, idx + 1);
     cultivationBody.appendChild(row);
   });
 }
@@ -2211,7 +2224,9 @@ function closeAddPersonModal() {
   addPersonModal.classList.remove("active");
 }
 
+let isSavingAddPerson = false;
 async function submitAddPersonForm() {
+  if (isSavingAddPerson) return;
   const name = addPersonNameInput.value.trim();
   const phone = addPersonPhoneInput.value.trim().replace(/\D/g, "");
 
@@ -2220,65 +2235,75 @@ async function submitAddPersonForm() {
     return;
   }
 
+  isSavingAddPerson = true;
   addPersonSubmitBtn.disabled = true;
   addPersonSubmitBtn.textContent = "Saving…";
   addPersonError.textContent = "";
 
-  if (addPersonContext === "admin") {
-    // Admin directly adds contact to sheet
-    const data = await api(null, {
-      action: "addContact",
-      requesterPhone: currentUser.phone,
-      phone: phone,
-      name: name,
-      sheet: activeCampaign || "GIC Calling",
-      event: (activeCampaign === "Special Events" && typeof adminFestivalFilter !== "undefined" && adminFestivalFilter && adminFestivalFilter.value !== "ALL") ? adminFestivalFilter.value : ""
-    });
+  try {
+    if (addPersonContext === "admin") {
+      // Admin directly adds contact to sheet
+      const data = await api(null, {
+        action: "addContact",
+        requesterPhone: currentUser.phone,
+        phone: phone,
+        name: name,
+        sheet: activeCampaign || "GIC Calling",
+        event: (activeCampaign === "Special Events" && typeof adminFestivalFilter !== "undefined" && adminFestivalFilter && adminFestivalFilter.value !== "ALL") ? adminFestivalFilter.value : ""
+      });
 
-    addPersonSubmitBtn.disabled = false;
-    addPersonSubmitBtn.textContent = "Add Person";
+      addPersonSubmitBtn.disabled = false;
+      addPersonSubmitBtn.textContent = "Add Person";
 
-    if (data.status === "success") {
-      showToast("Added " + name + " successfully!", "success");
-      closeAddPersonModal();
-      applyPayload(data);
-      renderContacts();
-      // Update cache
-      try {
-        localStorage.setItem(getCacheKey(activeCampaign), JSON.stringify(data));
-      } catch (e) {
-        console.warn("Storage quota exceeded or error caching:", e);
+      if (data.status === "success") {
+        showToast("Added " + name + " successfully!", "success");
+        closeAddPersonModal();
+        applyPayload(data);
+        renderContacts();
+        // Update cache
+        try {
+          localStorage.setItem(getCacheKey(activeCampaign), JSON.stringify(data));
+        } catch (e) {
+          console.warn("Storage quota exceeded or error caching:", e);
+        }
+      } else {
+        addPersonError.textContent = data.message || "Failed to add person.";
       }
     } else {
-      addPersonError.textContent = data.message || "Failed to add person.";
-    }
-  } else {
-    // Reception adds contact AND marks attendance automatically
-    const sessionName = receptionSessionName.value.trim() || "General Session";
-    const data = await api(null, {
-      action: "markAttendance",
-      requesterPhone: currentUser.phone,
-      phone: phone,
-      name: name,
-      sessionName: sessionName
-    });
+      // Reception adds contact AND marks attendance automatically
+      const sessionName = receptionSessionName.value.trim() || "General Session";
+      const data = await api(null, {
+        action: "markAttendance",
+        requesterPhone: currentUser.phone,
+        phone: phone,
+        name: name,
+        sessionName: sessionName
+      });
 
+      addPersonSubmitBtn.disabled = false;
+      addPersonSubmitBtn.textContent = "Register & Mark Attendance";
+
+      if (data.status === "success") {
+        showToast("Registered & marked attendance for " + name + "!", "success");
+        closeAddPersonModal();
+
+        // Save to Reception local storage marked attendance list
+        saveReceptionAttendanceLocally(name, phone, sessionName);
+
+        // Trigger search automatically to show registered details
+        receptionSearch.value = phone;
+        searchReceptionContact(phone);
+      } else {
+        addPersonError.textContent = data.message || "Failed to register person.";
+      }
+    }
+  } catch (err) {
+    console.error("Error adding person:", err);
+    addPersonError.textContent = "An error occurred. Please try again.";
     addPersonSubmitBtn.disabled = false;
-    addPersonSubmitBtn.textContent = "Register & Mark Attendance";
-
-    if (data.status === "success") {
-      showToast("Registered & marked attendance for " + name + "!", "success");
-      closeAddPersonModal();
-
-      // Save to Reception local storage marked attendance list
-      saveReceptionAttendanceLocally(name, phone, sessionName);
-
-      // Trigger search automatically to show registered details
-      receptionSearch.value = phone;
-      searchReceptionContact(phone);
-    } else {
-      addPersonError.textContent = data.message || "Failed to register person.";
-    }
+    addPersonSubmitBtn.textContent = (addPersonContext === "admin") ? "Add Person" : "Register & Mark Attendance";
+  } finally {
+    isSavingAddPerson = false;
   }
 }
 
@@ -2387,6 +2412,9 @@ function openAssignedDataModal() {
   if (!assignedDataBody) return;
   assignedDataBody.innerHTML = "";
 
+  const isFest = activeCampaign === "Special Events";
+  const limits = isFest ? (userFestLimits || {}) : (userLimits || {});
+
   // Calculate counts
   const counts = {};
   userNames.forEach(name => {
@@ -2422,7 +2450,7 @@ function openAssignedDataModal() {
     limitInput.style.fontSize = "12px";
     limitInput.style.margin = "0";
     limitInput.placeholder = "No Limit";
-    limitInput.value = userLimits[name] !== undefined ? userLimits[name] : "";
+    limitInput.value = limits[name] !== undefined ? limits[name] : "";
 
     limitInput.addEventListener("change", async () => {
       limitInput.disabled = true;
@@ -2432,17 +2460,21 @@ function openAssignedDataModal() {
         requesterPhone: currentUser.phone,
         username: name,
         limit: newLimit === "" ? "" : parseInt(newLimit, 10),
-        campaignType: "calling"
+        campaignType: isFest ? "festival" : "calling"
       });
       limitInput.disabled = false;
       if (response.status === "success") {
-        showToast(`Thursday limit for ${name} updated to: ${newLimit || "No Limit"}`, "success");
-        if (response.userLimits) {
-          userLimits = response.userLimits;
+        const campaignLabel = isFest ? "Special Events" : "GIC Calling";
+        showToast(`${campaignLabel} limit for ${name} updated to: ${newLimit || "No Limit"}`, "success");
+        if (isFest) {
+          if (response.userFestLimits) userFestLimits = response.userFestLimits;
+        } else {
+          if (response.userLimits) userLimits = response.userLimits;
         }
       } else {
         showToast("Error updating limit: " + response.message, "error");
-        limitInput.value = userLimits[name] !== undefined ? userLimits[name] : "";
+        const currentLimits = isFest ? (userFestLimits || {}) : (userLimits || {});
+        limitInput.value = currentLimits[name] !== undefined ? currentLimits[name] : "";
       }
     });
 
@@ -2936,12 +2968,21 @@ function renderAdminFestivalContacts() {
     return;
   }
 
-  filtered.forEach(contact => {
+  filtered.forEach((contact, idx) => {
     const tr = document.createElement("tr");
     tr.dataset.phone = contact.phone;
     if (contact.assignedTo) {
       tr.classList.add("row-assigned");
     }
+
+    // 0. S.No
+    const snoTd = document.createElement("td");
+    snoTd.style.fontWeight = "600";
+    snoTd.style.color = "var(--text-muted)";
+    snoTd.style.textAlign = "center";
+    snoTd.style.fontSize = "13px";
+    snoTd.textContent = idx + 1;
+    tr.appendChild(snoTd);
 
     // 1. Name
     const nameTd = document.createElement("td");
@@ -2988,30 +3029,7 @@ function renderAdminFestivalContacts() {
 
     // 6. Assigned To
     const assignTd = document.createElement("td");
-    const assignSelect = document.createElement("select");
-    assignSelect.className = "assign-select";
-    assignSelect.style.width = "130px";
-    const unassigned = document.createElement("option");
-    unassigned.value = "";
-    unassigned.textContent = "— Unassigned —";
-    assignSelect.appendChild(unassigned);
-    userNames.forEach(u => {
-      const o = document.createElement("option");
-      o.value = u;
-      o.textContent = u;
-      if (u === contact.assignedTo) o.selected = true;
-      assignSelect.appendChild(o);
-    });
-    assignSelect.addEventListener("change", () => {
-      contact.assignedTo = assignSelect.value;
-      if (assignSelect.value !== "") {
-        tr.classList.add("row-assigned");
-      } else {
-        tr.classList.remove("row-assigned");
-      }
-      tr.classList.add("row-dirty");
-    });
-    assignTd.appendChild(assignSelect);
+    assignTd.textContent = contact.assignedTo || "— Unassigned —";
     tr.appendChild(assignTd);
 
     // 7. Event
@@ -3118,7 +3136,7 @@ function renderAdminFestivalContacts() {
         phone: contact.phone,
         updates: {
           ws: wsSelect.value,
-          assignedTo: assignSelect.value,
+          assignedTo: contact.assignedTo,
           event: eventSelect.value,
           status: statusSelect.value
         }

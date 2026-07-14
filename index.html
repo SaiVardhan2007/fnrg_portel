@@ -117,7 +117,7 @@
       <!-- Admin Tab Switcher (Admin Only) -->
       <div id="admin-tabs" class="admin-tabs hidden">
         <button class="admin-tab active" data-target="master-data-section">All People Data</button>
-        <button class="admin-tab" data-target="calling-section">Calling Round</button>
+        <button class="admin-tab" data-target="calling-section">GIC Calling</button>
         <button class="admin-tab" data-target="admin-festival-section">Special Events</button>
       </div>
 
@@ -137,6 +137,7 @@
             <table class="contacts-table">
               <thead>
                 <tr>
+                  <th>S.No</th>
                   <th>Name</th>
                   <th>Phone Number</th>
                   <th>W/S</th>
@@ -167,23 +168,8 @@
             <select id="admin-festival-filter" class="status-select" style="min-width:160px; max-width:220px; padding:8px 30px 8px 12px; font-size:13.5px;">
               <option value="ALL">All Festivals</option>
             </select>
+            <button id="assigned-data-btn-festival" class="btn-secondary" style="padding:8px 14px; font-size:13px; font-weight:700; border-radius:8px;" title="Show assignments summary">Assigned Data</button>
             <button id="admin-message-btn-festival" class="btn-secondary" style="padding:8px 14px; font-size:13px; font-weight:700; border-radius:8px;" title="Configure Promotion Message Template">Promotion Message</button>
-          </div>
-        </div>
-
-        <!-- Auto Assign Panel -->
-        <div class="table-card" style="padding: 20px; margin-bottom: 20px; background:#fffdf9; border-color:#f1ebd9; border-radius:18px;">
-          <h3 style="font-size:15px; font-weight:700; margin-bottom:10px; color:var(--indigo);">⚙️ Autonomous Auto Assign Settings</h3>
-          <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:15px; line-height:1.4;">
-            Select users to automatically distribute newly added festival contacts to. This runs continuously in the cloud without needing you to keep the app open.
-          </p>
-          <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start; margin-bottom:15px;">
-            <div style="width:100%; max-width:550px;">
-              <p style="font-size:12.5px; font-weight:600; margin-bottom:8px; color:var(--text);">Select Users:</p>
-              <div id="auto-assign-users-list" style="display:flex; flex-direction:column; gap:6px; max-height:180px; overflow-y:auto; padding:6px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; min-width:450px;">
-                <!-- User checkboxes populated dynamically -->
-              </div>
-            </div>
           </div>
         </div>
 
@@ -192,6 +178,7 @@
             <table class="contacts-table">
               <thead>
                 <tr>
+                  <th>S.No</th>
                   <th>Name</th>
                   <th>Phone Number</th>
                   <th>W/S</th>
@@ -329,6 +316,7 @@
           <table id="cultivation-table" class="contacts-table hidden">
             <thead>
               <tr>
+                <th>S.No</th>
                 <th>Name</th>
                 <th>Phone</th>
                 <th>W/S</th>
