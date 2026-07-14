@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>FNRG Portal</title>
-  <meta name="description" content="FNRG Portal — Thursday Calling tracker">
+  <meta name="description" content="FNRG Portal — GIC Calling tracker">
   <meta name="theme-color" content="#0f766e">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -18,18 +18,24 @@
     <div class="login-card">
       <div class="login-logo">FNRG</div>
       <h1>Welcome</h1>
-      <p class="login-hint">Enter your phone number to continue</p>
+      <p class="login-hint">Enter your login credentials to continue</p>
 
       <form id="login-form" autocomplete="off">
-        <div class="phone-input-wrap">
-          <span class="phone-prefix">+91</span>
+        <div class="login-input-wrap">
           <input
-            id="phone-input"
-            type="tel"
-            inputmode="numeric"
-            maxlength="10"
-            placeholder="10-digit phone number"
-            aria-label="Phone number"
+            id="username-input"
+            type="text"
+            placeholder="User ID"
+            aria-label="User ID"
+            required
+          >
+        </div>
+        <div class="login-input-wrap" style="margin-bottom: 20px;">
+          <input
+            id="password-input"
+            type="password"
+            placeholder="Password"
+            aria-label="Password"
             required
           >
         </div>
@@ -42,7 +48,7 @@
     </div>
   </section>
 
-  <!-- ============ THURSDAY CALLING VIEW ============ -->
+  <!-- ============ APP VIEW ============ -->
   <section id="app-view" class="view hidden">
     <header class="app-header">
       <div class="header-left">
@@ -51,7 +57,7 @@
           <p class="header-greeting">Hare Krishna,</p>
           <h1 id="user-name" class="header-name">—</h1>
           <div id="user-header-stats" style="font-size:12px; color:var(--text-muted); margin-top:2px;">
-            Thursday Assigned: <span id="user-stat-thursday" style="font-weight:700; color:var(--indigo);">—</span> &nbsp;|&nbsp; Festival Assigned: <span id="user-stat-festival" style="font-weight:700; color:#8b5cf6;">—</span>
+            GIC Assigned: <span id="user-stat-thursday" style="font-weight:700; color:var(--indigo);">—</span> &nbsp;|&nbsp; Event Assigned: <span id="user-stat-festival" style="font-weight:700; color:#8b5cf6;">—</span>
           </div>
           <span id="role-badge" class="role-badge hidden">Admin</span>
         </div>
@@ -83,14 +89,14 @@
     <div id="campaign-dashboard" class="dashboard-view hidden">
       <h2 class="dashboard-title">What would you like to do?</h2>
       <div class="dashboard-grid">
-        <div class="dashboard-card disabled" data-campaign="Thursday Calling">
+        <div class="dashboard-card disabled" data-campaign="GIC Calling">
           <span class="card-icon">📞</span>
-          <span class="card-name">Thursday Calling</span>
+          <span class="card-name">GIC Calling</span>
           <span class="card-desc">Call logs and weekly round statistics</span>
         </div>
-        <div class="dashboard-card" data-campaign="Festival Promotions">
+        <div class="dashboard-card" data-campaign="Special Events">
           <span class="card-icon">🦚</span>
-          <span class="card-name">Festival Promotions</span>
+          <span class="card-name">Special Events</span>
           <span class="card-desc">Festival and special event invitations list</span>
         </div>
         <div class="dashboard-card disabled" data-campaign="Reception">
@@ -98,9 +104,9 @@
           <span class="card-name">Reception</span>
           <span class="card-desc">Search contacts and mark session attendance</span>
         </div>
-        <div class="dashboard-card disabled" data-campaign="Cultivation">
+        <div class="dashboard-card disabled" data-campaign="Core Cultivation">
           <span class="card-icon">🌱</span>
-          <span class="card-name">Cultivation</span>
+          <span class="card-name">Core Cultivation</span>
           <span class="card-desc">People you are cultivating across all campaigns</span>
         </div>
       </div>
@@ -112,7 +118,7 @@
       <div id="admin-tabs" class="admin-tabs hidden">
         <button class="admin-tab active" data-target="master-data-section">All People Data</button>
         <button class="admin-tab" data-target="calling-section">Calling Round</button>
-        <button class="admin-tab" data-target="admin-festival-section">Festival Promotions</button>
+        <button class="admin-tab" data-target="admin-festival-section">Special Events</button>
       </div>
 
       <!-- ============ SECTION 1: ALL PEOPLE DATA (Admin Only) ============ -->
@@ -152,10 +158,10 @@
         </div>
       </div>
 
-      <!-- ============ SECTION 1.5: FESTIVAL PROMOTIONS ADMIN (Admin Only) ============ -->
+      <!-- ============ SECTION 1.5: SPECIAL EVENTS ADMIN (Admin Only) ============ -->
       <div id="admin-festival-section" class="admin-section hidden">
         <div class="page-title-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-          <h2 class="page-title" style="margin:0;">Festival Promotions Admin</h2>
+          <h2 class="page-title" style="margin:0;">Special Events Admin</h2>
           <div style="display:flex; gap:8px; align-items:center;">
             <label for="admin-festival-filter" style="font-weight:600; font-size:13.5px; color:var(--text);">Filter:</label>
             <select id="admin-festival-filter" class="status-select" style="min-width:160px; max-width:220px; padding:8px 30px 8px 12px; font-size:13.5px;">
@@ -172,9 +178,9 @@
             Select users to automatically distribute newly added festival contacts to. This runs continuously in the cloud without needing you to keep the app open.
           </p>
           <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start; margin-bottom:15px;">
-            <div style="width:100%; max-width:500px;">
+            <div style="width:100%; max-width:550px;">
               <p style="font-size:12.5px; font-weight:600; margin-bottom:8px; color:var(--text);">Select Users:</p>
-              <div id="auto-assign-users-list" style="display:flex; flex-direction:column; gap:6px; max-height:180px; overflow-y:auto; padding:6px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; min-width:380px;">
+              <div id="auto-assign-users-list" style="display:flex; flex-direction:column; gap:6px; max-height:180px; overflow-y:auto; padding:6px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; min-width:450px;">
                 <!-- User checkboxes populated dynamically -->
               </div>
             </div>
@@ -209,10 +215,10 @@
         </div>
       </div>
 
-      <!-- ============ SECTION 2: THURSDAY CALLING VIEW (All Users) ============ -->
+      <!-- ============ SECTION 2: GIC CALLING VIEW (All Users) ============ -->
       <div id="calling-section">
         <div class="page-title-row">
-          <h2 id="calling-page-title" class="page-title">Thursday Calling <span id="active-date" class="active-date"></span></h2>
+          <h2 id="calling-page-title" class="page-title">GIC Calling <span id="active-date" class="active-date"></span></h2>
           <div class="title-actions">
             <button id="assign-btn" class="btn-secondary hidden" title="Randomly assign calls to users">Assign Calls</button>
             <button id="save-all-btn" class="btn-secondary hidden" title="Save all changed rows at once" disabled>Save Assignments</button>
@@ -313,11 +319,11 @@
         </div>
       </div>
 
-      <!-- ============ CULTIVATION SECTION ============ -->
+      <!-- ============ CORE CULTIVATION SECTION ============ -->
       <div id="cultivation-section" class="campaign-section hidden">
-        <h2 class="page-title">Cultivation — Your People</h2>
+        <h2 class="page-title">Core Cultivation — Your People</h2>
         <div id="cultivation-empty" class="cultivation-empty hidden">
-          <p>No contacts are assigned to you for cultivation yet.</p>
+          <p>No contacts are assigned to you for core cultivation yet.</p>
         </div>
         <div class="table-scroll">
           <table id="cultivation-table" class="contacts-table hidden">

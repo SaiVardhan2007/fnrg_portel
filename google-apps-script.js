@@ -28,9 +28,10 @@
 // Configuration & Seed Data
 // ---------------------------------------------------------------
 
-var SHEET_USERS = "Users";
-var SHEET_CALLING = "Thursday Calling";
-var SHEET_FESTIVAL = "Festival Promotions";
+var SHEET_GIC_ADMIN = "GIC Admin";
+var SHEET_EVENT_ADMIN = "Event Admin";
+var SHEET_CALLING = "GIC Calling";
+var SHEET_FESTIVAL = "Special Events";
 
 var CACHE_KEY_CALLING = "calling_v10";
 var CACHE_KEY_USERS = "users_v3";
@@ -159,130 +160,61 @@ function ensureSetup() {
   // so the whole block is guarded and the API keeps serving data regardless.
   try {
 
-  // --- Users tab: create or upgrade ---
-  var users = doc.getSheetByName(SHEET_USERS);
-  if (!users) {
-    users = doc.insertSheet(SHEET_USERS);
-    try { users.getRange(1, 1, 1, 10).setValues([["Name", "Phone Number", "Role", "Call Limit", "Auto Assign", "Festival", "From Date", "To Date", "Festival Assigned", "Festival Limit"]]); } catch(e){}
-    try { styleHeader(users.getRange(1, 1, 1, 10), "#0f766e"); } catch(e){}
-    try { users.setFrozenRows(1); } catch(e){}
-    try { users.getRange(2, 2, 1000, 1).setNumberFormat("@"); } catch(e){}
-    try { users.getRange(2, 4, 1000, 1).setNumberFormat("#"); } catch(e){}
-    try { users.getRange(2, 10, 1000, 1).setNumberFormat("#"); } catch(e){}
-    try { users.getRange(2, 1, SAMPLE_USERS.length, 3).setValues(SAMPLE_USERS); } catch(e){}
-  } else {
-    try {
-      var roleHeader = String(users.getRange(1, 3).getValue()).trim();
-      if (roleHeader !== "Role") {
-        users.getRange(1, 3).setValue("Role");
-        try { styleHeader(users.getRange(1, 3), "#0f766e"); } catch(e){}
-        var uLast = users.getLastRow();
-        if (uLast > 1) {
-          var roleRange = users.getRange(2, 3, uLast - 1, 1);
-          var roleValues = roleRange.getValues();
-          for (var r = 0; r < roleValues.length; r++) {
-            if (String(roleValues[r][0]).trim() === "") roleValues[r][0] = ROLE_USER;
-          }
-          roleRange.setValues(roleValues);
-        }
-      }
-    } catch(e){}
-    try {
-      // Migrate: check D header is Call Limit
-      var limitHeader = String(users.getRange(1, 4).getValue()).trim();
-      if (limitHeader !== "Call Limit") {
-        users.getRange(1, 4).setValue("Call Limit");
-        try { styleHeader(users.getRange(1, 4), "#0f766e"); } catch(e){}
-        try { users.getRange(2, 4, 1000, 1).setNumberFormat("#"); } catch(e){}
-      }
-    } catch(e){}
-    try {
-      // Migrate: check E header is Auto Assign
-      var autoAssignHeader = String(users.getRange(1, 5).getValue()).trim();
-      if (autoAssignHeader !== "Auto Assign") {
-        users.getRange(1, 5).setValue("Auto Assign");
-        try { styleHeader(users.getRange(1, 5), "#0f766e"); } catch(e){}
-      }
-    } catch(e){}
-    try {
-      // Migrate: check F header is Festival
-      var festivalHeader = String(users.getRange(1, 6).getValue()).trim();
-      if (festivalHeader !== "Festival") {
-        users.getRange(1, 6).setValue("Festival");
-        try { styleHeader(users.getRange(1, 6), "#0f766e"); } catch(e){}
-      }
-    } catch(e){}
-    try {
-      // Migrate: check G header is From Date
-      var fromHeader = String(users.getRange(1, 7).getValue()).trim();
-      if (fromHeader !== "From Date") {
-        users.getRange(1, 7).setValue("From Date");
-        try { styleHeader(users.getRange(1, 7), "#0f766e"); } catch(e){}
-      }
-    } catch(e){}
-    try {
-      // Migrate: check H header is To Date
-      var toHeader = String(users.getRange(1, 8).getValue()).trim();
-      if (toHeader !== "To Date") {
-        users.getRange(1, 8).setValue("To Date");
-        try { styleHeader(users.getRange(1, 8), "#0f766e"); } catch(e){}
-      }
-    } catch(e){}
-    try {
-      // Migrate: check I header is Festival Assigned
-      var festAssignedHeader = String(users.getRange(1, 9).getValue()).trim();
-      if (festAssignedHeader !== "Festival Assigned") {
-        users.getRange(1, 9).setValue("Festival Assigned");
-        try { styleHeader(users.getRange(1, 9), "#0f766e"); } catch(e){}
-      }
-    } catch(e){}
-    try {
-      // Migrate: check J header is Festival Limit
-      var festLimitHeader = String(users.getRange(1, 10).getValue()).trim();
-      if (festLimitHeader !== "Festival Limit") {
-        users.getRange(1, 10).setValue("Festival Limit");
-        try { styleHeader(users.getRange(1, 10), "#0f766e"); } catch(e){}
-        try { users.getRange(2, 10, 1000, 1).setNumberFormat("#"); } catch(e){}
-      }
-    } catch(e){}
-    try {
-      // Ensure the admin user exists and has the admin role
-      var adminRowIndex = -1;
-      var uLast2 = users.getLastRow();
-      if (uLast2 > 1) {
-        var phones = users.getRange(2, 2, uLast2 - 1, 1).getValues();
-        for (var p = 0; p < phones.length; p++) {
-          if (normalizePhone(phones[p][0]) === ADMIN_SEED.phone) {
-            adminRowIndex = p + 2;
-            break;
-          }
-        }
-      }
-      if (adminRowIndex === -1) {
-        users.appendRow([ADMIN_SEED.name, ADMIN_SEED.phone, ROLE_ADMIN, ""]);
-        try { users.getRange(users.getLastRow(), 2).setNumberFormat("@").setValue(ADMIN_SEED.phone); } catch(e){}
-      } else {
-        users.getRange(adminRowIndex, 3).setValue(ROLE_ADMIN);
-      }
-    } catch(e){}
-    
-    // Automatically write formulas for Festival Assigned column in Users sheet
-    try {
-      var uLast3 = users.getLastRow();
-      if (uLast3 > 1) {
-        var roles = users.getRange(2, 3, uLast3 - 1, 1).getValues();
-        for (var r = 0; r < roles.length; r++) {
-          var role = String(roles[r][0]).trim().toLowerCase();
-          var rowIndex = r + 2;
-          if (role !== "festivals") {
-            users.getRange(rowIndex, 9).setFormula("=COUNTIF('" + SHEET_FESTIVAL + "'!G:G, A" + rowIndex + ")");
-          } else {
-            users.getRange(rowIndex, 9).setValue("");
-          }
-        }
-      }
-    } catch(e){}
+  // --- Users tab removal ---
+  try {
+    var oldUsers = doc.getSheetByName("Users");
+    if (oldUsers) {
+      doc.deleteSheet(oldUsers);
+    }
+  } catch(e){}
+
+  // --- GIC Admin tab: create or migrate ---
+  var gicAdmin = doc.getSheetByName(SHEET_GIC_ADMIN);
+  if (!gicAdmin) {
+    gicAdmin = doc.insertSheet(SHEET_GIC_ADMIN);
+    try { gicAdmin.getRange(1, 1, 1, 8).setValues([["User Name", "Login ID", "Login PW", "Role", "GIC Call Limit", "Auto Assign Count", "Auto Assign", "Event"]]); } catch(e){}
+    try { styleHeader(gicAdmin.getRange(1, 1, 1, 8), "#0f766e"); } catch(e){}
+    try { gicAdmin.setFrozenRows(1); } catch(e){}
+    try { gicAdmin.getRange(2, 3, 1000, 1).setNumberFormat("@"); } catch(e){}
+    try { gicAdmin.getRange(2, 5, 1000, 1).setNumberFormat("#"); } catch(e){}
+    try { gicAdmin.getRange(2, 6, 1000, 1).setNumberFormat("#"); } catch(e){}
+    try { gicAdmin.appendRow([ADMIN_SEED.name, "fnrg", ADMIN_SEED.phone, ROLE_ADMIN, "", "", "No", "GIC"]); } catch(e){}
+    try { gicAdmin.getRange(2, 3).setValue(ADMIN_SEED.phone); } catch(e){}
   }
+
+  // Update GIC Admin formulas (Column F = index 6)
+  try {
+    var gLast = gicAdmin.getLastRow();
+    if (gLast > 1) {
+      for (var r = 2; r <= gLast; r++) {
+        gicAdmin.getRange(r, 6).setFormula("=COUNTIF('" + SHEET_CALLING + "'!G:G, A" + r + ")");
+      }
+    }
+  } catch(e){}
+
+  // --- Event Admin tab: create or migrate ---
+  var eventAdmin = doc.getSheetByName(SHEET_EVENT_ADMIN);
+  if (!eventAdmin) {
+    eventAdmin = doc.insertSheet(SHEET_EVENT_ADMIN);
+    try { eventAdmin.getRange(1, 1, 1, 8).setValues([["User Name", "Login ID", "Login PW", "Role", "Event Call Limit", "Auto Assign Count", "Auto Assign", "Event"]]); } catch(e){}
+    try { styleHeader(eventAdmin.getRange(1, 1, 1, 8), "#0f766e"); } catch(e){}
+    try { eventAdmin.setFrozenRows(1); } catch(e){}
+    try { eventAdmin.getRange(2, 3, 1000, 1).setNumberFormat("@"); } catch(e){}
+    try { eventAdmin.getRange(2, 5, 1000, 1).setNumberFormat("#"); } catch(e){}
+    try { eventAdmin.getRange(2, 6, 1000, 1).setNumberFormat("#"); } catch(e){}
+    try { eventAdmin.appendRow([ADMIN_SEED.name, "fnrg", ADMIN_SEED.phone, ROLE_ADMIN, "", "", "No", ""]); } catch(e){}
+    try { eventAdmin.getRange(2, 3).setValue(ADMIN_SEED.phone); } catch(e){}
+  }
+
+  // Update Event Admin formulas (Column F = index 6)
+  try {
+    var eLast = eventAdmin.getLastRow();
+    if (eLast > 1) {
+      for (var r = 2; r <= eLast; r++) {
+        eventAdmin.getRange(r, 6).setFormula("=COUNTIF('" + SHEET_FESTIVAL + "'!G:G, A" + r + ")");
+      }
+    }
+  } catch(e){}
 
   // --- Thursday Calling tab: create or migrate ---
   var calling = doc.getSheetByName(SHEET_CALLING);
@@ -473,8 +405,9 @@ function applyValidations(doc, sheetName) {
   sheetName = sheetName || SHEET_CALLING;
   var cache = CacheService.getScriptCache();
   var calling = doc.getSheetByName(sheetName);
-  var users = doc.getSheetByName(SHEET_USERS);
-  if (!calling || !users) return;
+  var userSheetName = (sheetName === SHEET_FESTIVAL) ? SHEET_EVENT_ADMIN : SHEET_GIC_ADMIN;
+  var userSheet = doc.getSheetByName(userSheetName);
+  if (!calling || !userSheet) return;
 
   var lastRow = calling.getLastRow();
   var active = getActiveDateColumn(calling);
@@ -505,7 +438,7 @@ function applyValidations(doc, sheetName) {
 
     try {
       var assignRule = SpreadsheetApp.newDataValidation()
-        .requireValueInRange(users.getRange("A2:A1000"), true).setAllowInvalid(true).build();
+        .requireValueInRange(userSheet.getRange("A2:A1000"), true).setAllowInvalid(true).build();
       calling.getRange(2, COL_CULTIVATED, dataRows, 1).setDataValidation(assignRule);
       calling.getRange(2, COL_ASSIGNED, dataRows, 1).setDataValidation(assignRule);
     } catch(e){}
@@ -595,35 +528,65 @@ function getUsers(skipCache) {
   }
 
   var doc = ensureSetup();
-  var sheet = doc.getSheetByName(SHEET_USERS);
-  var lastRow = sheet.getLastRow();
-  var result = [];
+  var gicSheet = doc.getSheetByName(SHEET_GIC_ADMIN);
+  var eventSheet = doc.getSheetByName(SHEET_EVENT_ADMIN);
+  
+  var usersMap = {}; // phone -> userObj
 
-  if (lastRow > 1) {
-    var values = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
+  function parseSheet(sheet, isGIC) {
+    if (!sheet) return;
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) return;
+    var values = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
     for (var i = 0; i < values.length; i++) {
       var name = String(values[i][0]).trim();
-      var phone = normalizePhone(values[i][1]);
-      var rawRole = String(values[i][2]).trim().toLowerCase();
-      if (rawRole === "festivals") continue;
+      var loginId = String(values[i][1]).trim();
+      var phone = normalizePhone(values[i][2]);
+      var rawRole = String(values[i][3]).trim().toLowerCase();
       if (name === "" || phone === "") continue;
+      
       var role = rawRole === ROLE_ADMIN ? ROLE_ADMIN : ROLE_USER;
-      var limit = Number(values[i][3]);
-      var limitVal = (isNaN(limit) || values[i][3] === "") ? 999 : limit;
-      var autoAssign = String(values[i][4] || "").trim().toLowerCase() === "yes";
-      var festival = String(values[i][5] || "").trim();
-      var festLimit = Number(values[i][9]); // Column J is index 9
-      var festLimitVal = (isNaN(festLimit) || values[i][9] === "") ? 999 : festLimit;
-      result.push({ 
-        name: name, 
-        phone: phone, 
-        role: role, 
-        limit: limitVal, 
-        autoAssign: autoAssign,
-        festival: festival,
-        festLimit: festLimitVal
-      });
+      
+      if (!usersMap[phone]) {
+        usersMap[phone] = {
+          name: name,
+          phone: phone,
+          loginId: loginId,
+          role: role,
+          limit: 999,
+          autoAssign: false,
+          festival: "",
+          festLimit: 999,
+          festAutoAssign: false
+        };
+      } else {
+        if (role === ROLE_ADMIN) {
+          usersMap[phone].role = ROLE_ADMIN;
+        }
+      }
+      
+      var limitVal = Number(values[i][4]);
+      if (isNaN(limitVal) || values[i][4] === "") limitVal = 999;
+      
+      var autoAssign = String(values[i][6] || "").trim().toLowerCase() === "yes";
+      
+      if (isGIC) {
+        usersMap[phone].limit = limitVal;
+        usersMap[phone].autoAssign = autoAssign;
+      } else {
+        usersMap[phone].festLimit = limitVal;
+        usersMap[phone].festAutoAssign = autoAssign;
+        usersMap[phone].festival = String(values[i][7] || "").trim();
+      }
     }
+  }
+
+  parseSheet(gicSheet, true);
+  parseSheet(eventSheet, false);
+
+  var result = [];
+  for (var phone in usersMap) {
+    result.push(usersMap[phone]);
   }
 
   cache.put(CACHE_KEY_USERS, JSON.stringify(result), 30);
@@ -632,41 +595,59 @@ function getUsers(skipCache) {
 
 function getFestivals() {
   var doc = ensureSetup();
-  var sheet = doc.getSheetByName(SHEET_USERS);
+  var sheet = doc.getSheetByName(SHEET_EVENT_ADMIN);
   if (!sheet) return [];
   var lastRow = sheet.getLastRow();
   var festivals = [];
   var seen = {};
   if (lastRow > 1) {
-    var values = sheet.getRange(2, 1, lastRow - 1, 8).getValues(); // Read columns A to H
+    var values = sheet.getRange(2, 8, lastRow - 1, 1).getValues(); // Column H (8)
     for (var i = 0; i < values.length; i++) {
-      var role = String(values[i][2]).trim().toLowerCase();
-      if (role === "festivals") {
-        var name = String(values[i][0]).trim(); // Column A (Name)
-        if (name !== "" && !seen.hasOwnProperty(name)) {
-          festivals.push(name);
-          seen[name] = true;
-        }
+      var name = String(values[i][0]).trim();
+      if (name !== "" && name.toLowerCase() !== "gic" && !seen.hasOwnProperty(name)) {
+        festivals.push(name);
+        seen[name] = true;
       }
     }
   }
   return festivals;
 }
 
-function findUser(phone) {
-  var target = normalizePhone(phone);
-  if (target.length < 10) return null;
+function findUser(username, password) {
+  var targetUser = String(username || "").trim().toLowerCase();
+  var targetPass = normalizePhone(password || "");
   
-  // Try reading from cache first
+  if (targetUser === "" && targetPass === "") return null;
+
   var users = getUsers(false);
-  for (var i = 0; i < users.length; i++) {
-    if (users[i].phone === target) return users[i];
-  }
   
-  // Cache-busting fallback: if not found, pull fresh from sheet to handle instant spreadsheet updates
-  users = getUsers(true);
-  for (var i = 0; i < users.length; i++) {
-    if (users[i].phone === target) return users[i];
+  // If we have both username and password, match both
+  if (targetUser !== "" && targetPass !== "") {
+    for (var i = 0; i < users.length; i++) {
+      if (users[i].loginId.toLowerCase() === targetUser && users[i].phone === targetPass) {
+        return users[i];
+      }
+    }
+    users = getUsers(true);
+    for (var i = 0; i < users.length; i++) {
+      if (users[i].loginId.toLowerCase() === targetUser && users[i].phone === targetPass) {
+        return users[i];
+      }
+    }
+  } else {
+    // Legacy fallback (checking only phone or only ID)
+    var key = targetPass !== "" ? targetPass : targetUser;
+    for (var i = 0; i < users.length; i++) {
+      if (users[i].phone === key || users[i].loginId.toLowerCase() === key) {
+        return users[i];
+      }
+    }
+    users = getUsers(true);
+    for (var i = 0; i < users.length; i++) {
+      if (users[i].phone === key || users[i].loginId.toLowerCase() === key) {
+        return users[i];
+      }
+    }
   }
   
   return null;
@@ -945,11 +926,11 @@ function buildDataPayload(user, sheetName, campaignType, skipCache) {
     payload.allTCAssigned = allTCAssigned;
     payload.allFPAssigned = allFPAssigned;
 
-    // Auto-assign state for Festival Promotions admin panel
+    // Auto-assign state for Special Events admin panel
     var aaUsers = [];
     var aaUserFestivals = {};
     allUsers.forEach(function(u) {
-      if (u.autoAssign) {
+      if (u.festAutoAssign) {
         aaUsers.push(u.name);
       }
       aaUserFestivals[u.name] = u.festival || ""; // Include for all users so dropdown works for any checkbox toggle
@@ -1031,12 +1012,17 @@ function doGet(e) {
     }
 
     if (action === "login" || action === "data") {
-      var user = findUser(params.phone || "");
+      var username = params.username || "";
+      var password = params.password || "";
+      if (username === "" && password === "" && params.phone) {
+        password = params.phone;
+      }
+      var user = findUser(username, password);
       if (!user) {
         return jsonResponse({
           status: "error",
           code: "USER_NOT_FOUND",
-          message: "This phone number is not registered. Please contact your coordinator."
+          message: "Invalid User ID or Password. Please try again."
         });
       }
       var sheetName = params.sheet || SHEET_CALLING;
@@ -1313,13 +1299,14 @@ function doPost(e) {
 
       try {
         var doc = ensureSetup();
-        var sheet = doc.getSheetByName(SHEET_USERS);
-        var lastRow = sheet.getLastRow();
+        var sheetName = (body.campaignType === "festival") ? SHEET_EVENT_ADMIN : SHEET_GIC_ADMIN;
+        var sheet = doc.getSheetByName(sheetName);
+        var lastRow = sheet ? sheet.getLastRow() : 0;
         if (lastRow > 1) {
           var names = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
           for (var i = 0; i < names.length; i++) {
             if (String(names[i][0]).trim() === targetUser) {
-              sheet.getRange(i + 2, 5).setValue(enabled ? "Yes" : "");
+              sheet.getRange(i + 2, 7).setValue(enabled ? "Yes" : "No"); // Column G is 7
               break;
             }
           }
@@ -1334,7 +1321,7 @@ function doPost(e) {
           } catch(e) {}
         }
 
-        return jsonResponse(buildDataPayload(requester, "Festival Promotions"));
+        return jsonResponse(buildDataPayload(requester, SHEET_FESTIVAL));
       } finally {
         lock.releaseLock();
       }
@@ -1356,13 +1343,13 @@ function doPost(e) {
 
       try {
         var doc = ensureSetup();
-        var sheet = doc.getSheetByName(SHEET_USERS);
-        var lastRow = sheet.getLastRow();
+        var sheet = doc.getSheetByName(SHEET_EVENT_ADMIN);
+        var lastRow = sheet ? sheet.getLastRow() : 0;
         if (lastRow > 1) {
           var names = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
           for (var i = 0; i < names.length; i++) {
             if (String(names[i][0]).trim() === targetUser) {
-              sheet.getRange(i + 2, 6).setValue(festivalName); // Column F is 6
+              sheet.getRange(i + 2, 8).setValue(festivalName); // Column H is 8
               break;
             }
           }
@@ -1375,7 +1362,7 @@ function doPost(e) {
           runAutoAssignment();
         } catch(e) {}
 
-        return jsonResponse(buildDataPayload(requester, "Festival Promotions"));
+        return jsonResponse(buildDataPayload(requester, SHEET_FESTIVAL));
       } finally {
         lock.releaseLock();
       }
@@ -1401,14 +1388,14 @@ function doPost(e) {
 
       try {
         var doc = ensureSetup();
-        var sheet = doc.getSheetByName(SHEET_USERS);
-        var lastRow = sheet.getLastRow();
-        var colIndex = (body.campaignType === "festival") ? 10 : 4;
+        var sheetName = (body.campaignType === "festival") ? SHEET_EVENT_ADMIN : SHEET_GIC_ADMIN;
+        var sheet = doc.getSheetByName(sheetName);
+        var lastRow = sheet ? sheet.getLastRow() : 0;
         if (lastRow > 1) {
           var names = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
           for (var i = 0; i < names.length; i++) {
             if (String(names[i][0]).trim() === targetUser) {
-              sheet.getRange(i + 2, colIndex).setValue(limitVal);
+              sheet.getRange(i + 2, 5).setValue(limitVal); // Column E is 5
               break;
             }
           }
@@ -1421,7 +1408,7 @@ function doPost(e) {
           runAutoAssignment();
         } catch(e) {}
 
-        return jsonResponse(buildDataPayload(requester, "Festival Promotions"));
+        return jsonResponse(buildDataPayload(requester, SHEET_FESTIVAL));
       } finally {
         lock.releaseLock();
       }
@@ -1760,31 +1747,17 @@ function doPost(e) {
 function getCurrentFestival() {
   try {
     var doc = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = doc.getSheetByName(SHEET_USERS);
+    var sheet = doc.getSheetByName(SHEET_EVENT_ADMIN);
     if (!sheet) return "";
     var lastRow = sheet.getLastRow();
     if (lastRow < 2) return "";
     
-    // Read F (Festival), G (From Date), H (To Date) -> columns 6, 7, 8
-    var values = sheet.getRange(2, 6, lastRow - 1, 3).getValues();
-    var today = new Date();
-    today.setHours(0,0,0,0);
-    
+    // Read Column H (8)
+    var values = sheet.getRange(2, 8, lastRow - 1, 1).getValues();
     for (var i = 0; i < values.length; i++) {
       var fest = String(values[i][0]).trim();
-      var fromVal = values[i][1];
-      var toVal = values[i][2];
-      
-      if (fest !== "" && fromVal && toVal) {
-        var fromDate = new Date(fromVal);
-        var toDate = new Date(toVal);
-        if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
-          fromDate.setHours(0,0,0,0);
-          toDate.setHours(23,59,59,999);
-          if (today >= fromDate && today <= toDate) {
-            return fest;
-          }
-        }
+      if (fest !== "" && fest.toLowerCase() !== "gic") {
+        return fest;
       }
     }
   } catch(e) {}
@@ -1793,7 +1766,7 @@ function getCurrentFestival() {
 
 function runAutoAssignment() {
   var allUsers = getUsers(false);
-  var activeAssignees = allUsers.filter(function(u) { return u.autoAssign; });
+  var activeAssignees = allUsers.filter(function(u) { return u.festAutoAssign; });
   if (activeAssignees.length === 0) return;
 
   var userPhones = {};
@@ -1809,7 +1782,7 @@ function runAutoAssignment() {
 
   try {
     var doc = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = doc.getSheetByName("Festival Promotions");
+    var sheet = doc.getSheetByName(SHEET_FESTIVAL);
     if (!sheet) return;
 
     var lastRow = sheet.getLastRow();
@@ -1881,7 +1854,7 @@ function runAutoAssignment() {
     if (assignedAny) {
       SpreadsheetApp.flush();
       // Clear cache
-      var cacheKey = CACHE_KEY_CALLING + "_" + "Festival Promotions".replace(/\s+/g, "_");
+      var cacheKey = CACHE_KEY_CALLING + "_" + SHEET_FESTIVAL.replace(/\s+/g, "_");
       CacheService.getScriptCache().remove(cacheKey);
     }
   } finally {
@@ -1889,40 +1862,7 @@ function runAutoAssignment() {
   }
 }
 function getFestivalForDate(targetDate) {
-  try {
-    var doc = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = doc.getSheetByName(SHEET_USERS);
-    if (!sheet) return "";
-    var lastRow = sheet.getLastRow();
-    if (lastRow < 2) return "";
-    
-    // Read columns A to H (1 to 8) to parse festival name from Column A and From/To Dates from Columns G & H
-    var values = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
-    var checkDate = new Date(targetDate);
-    checkDate.setHours(0,0,0,0);
-    
-    for (var i = 0; i < values.length; i++) {
-      var role = String(values[i][2]).trim().toLowerCase();
-      if (role === "festivals") {
-        var fest = String(values[i][0]).trim(); // Column A (Name)
-        var fromVal = values[i][6]; // Column G (7)
-        var toVal = values[i][7]; // Column H (8)
-        
-        if (fest !== "" && fromVal && toVal) {
-          var fromDate = new Date(fromVal);
-          var toDate = new Date(toVal);
-          if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
-            fromDate.setHours(0,0,0,0);
-            toDate.setHours(23,59,59,999);
-            if (checkDate >= fromDate && checkDate <= toDate) {
-              return fest;
-            }
-          }
-        }
-      }
-    }
-  } catch(e) {}
-  return "";
+  return getCurrentFestival();
 }
 
 function processFormResponses() {
@@ -1941,11 +1881,12 @@ function processFormResponses() {
   var lastRow = formSheet.getLastRow();
   if (lastRow < 2) return;
   
-  // Find Name, Phone and Timestamp columns by scanning header
+  // Find Name, Phone, Timestamp and Occupation columns by scanning header
   var headers = formSheet.getRange(1, 1, 1, formSheet.getLastColumn()).getValues()[0];
   var nameCol = 2; // default B
   var phoneCol = 3; // default C
   var timestampCol = 1; // default A
+  var occupationCol = -1;
   var foundYourName = false;
   
   for (var i = 0; i < headers.length; i++) {
@@ -1959,6 +1900,8 @@ function processFormResponses() {
       phoneCol = i + 1;
     } else if (h.indexOf("timestamp") !== -1 || h.indexOf("time") !== -1) {
       timestampCol = i + 1;
+    } else if (h.indexOf("occupation") !== -1) {
+      occupationCol = i + 1;
     }
   }
   
@@ -1996,22 +1939,38 @@ function processFormResponses() {
     // Skip if already in Festival Promotions
     if (existingPhones.hasOwnProperty(phone)) continue;
     
-    // Parse timestamp to find correct festival
-    var tsVal = formValues[r][timestampCol - 1];
-    var tsDate = new Date(tsVal);
-    if (isNaN(tsDate.getTime())) {
-      tsDate = new Date(); // fallback to today
+    // Parse occupation
+    var occupationVal = "";
+    if (occupationCol !== -1) {
+      var occRaw = String(formValues[r][occupationCol - 1]).trim().toLowerCase();
+      if (occRaw === "working professional" || occRaw === "job search" || occRaw.indexOf("working professional") !== -1 || occRaw.indexOf("job search") !== -1) {
+        occupationVal = "W";
+      } else if (occRaw === "student" || occRaw.indexOf("student") !== -1) {
+        occupationVal = "S";
+      } else if (occRaw === "") {
+        occupationVal = "";
+      } else {
+        occupationVal = "NA";
+      }
+    } else {
+      occupationVal = "NA";
     }
     
-    // Find matching festival based on the timestamp date
-    var eventName = getFestivalForDate(tsDate);
+    // Find matching festival based on the form sheet name or getCurrentFestival()
+    var eventName = "";
+    var formSheetName = formSheet.getName();
+    if (formSheetName !== "Form Responses 1" && formSheetName !== "Form Responces 1" && formSheetName.indexOf("Form") === -1) {
+      eventName = formSheetName;
+    } else {
+      eventName = getCurrentFestival();
+    }
     
     // Append to Festival Promotions
     var nextRow = festivalSheet.getLastRow() + 1;
     var rowValues = [
       name,
       phone,
-      "NA",
+      occupationVal,
       '=COUNTIFS(\'Session History\'!D:D, $B' + nextRow + ', \'Session History\'!E:E, "Yes")',
       0,
       "",

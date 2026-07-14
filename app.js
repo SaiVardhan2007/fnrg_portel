@@ -26,13 +26,13 @@ let activeDate = "";      // name of the sheet's last date column, e.g. "Jul 11"
 let userNames = [];       // admin only: names for the Assigned To / Cultivated By dropdowns
 let userLimits = {};      // admin only: name -> call limit mapping (Thursday)
 let userFestLimits = {};  // admin only: name -> festival call limit mapping
-let userThursdayAssigned = 0; // logged in user's thursday calling assignments count
-let userFestivalAssigned = 0; // logged in user's festival promotions assignments count
-let allTCAssigned = {};   // admin only: name -> thursday assigned count mapping
-let allFPAssigned = {};   // admin only: name -> festival assigned count mapping
+let userThursdayAssigned = 0; // logged in user's GIC calling assignments count
+let userFestivalAssigned = 0; // logged in user's special events assignments count
+let allTCAssigned = {};   // admin only: name -> GIC assigned count mapping
+let allFPAssigned = {};   // admin only: name -> event assigned count mapping
 let registeredUserPhones = []; // admin only: list of registered user phone numbers to avoid assigning to
 let dirtyContacts = new Set(); // set of phones with staged updates for bulk save
-let activeCampaign = "Thursday Calling"; // default active campaign
+let activeCampaign = "GIC Calling"; // default active campaign
 let settings = {}; // settings dictionary for WhatsApp templates
 
 function isAdmin() {
@@ -43,7 +43,8 @@ function isAdmin() {
 const loginView = document.getElementById("login-view");
 const appView = document.getElementById("app-view");
 const loginForm = document.getElementById("login-form");
-const phoneInput = document.getElementById("phone-input");
+const usernameInput = document.getElementById("username-input");
+const passwordInput = document.getElementById("password-input");
 const loginBtn = document.getElementById("login-btn");
 const loginError = document.getElementById("login-error");
 const userNameEl = document.getElementById("user-name");
@@ -245,7 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (messagePosterUpload) messagePosterUpload.value = "";
 
     if (messageModalTitle) {
-      messageModalTitle.textContent = type === "festival_message" ? "Festival Promotions Message" : "Thursday Calling Message";
+      messageModalTitle.textContent = type === "festival_message" ? "Special Events Message" : "GIC Calling Message";
     }
     if (messageTemplateInput) {
       messageTemplateInput.value = settings[type] || "";
@@ -399,45 +400,52 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const target = tab.dataset.target;
       if (target === "master-data-section") {
-        activeCampaign = "Thursday Calling";
+        activeCampaign = "GIC Calling";
         masterSection.classList.remove("hidden");
         document.getElementById("calling-section").style.display = "none";
         if (adminFestivalSection) adminFestivalSection.classList.add("hidden");
         if (assignedDataBtn) assignedDataBtn.classList.add("hidden");
-        refreshContacts(); // Load Thursday Calling master data
+        refreshContacts(); // Load GIC Calling master data
       } else if (target === "calling-section") {
-        activeCampaign = "Thursday Calling";
+        activeCampaign = "GIC Calling";
         masterSection.classList.add("hidden");
         document.getElementById("calling-section").style.display = "";
         if (adminFestivalSection) adminFestivalSection.classList.add("hidden");
         if (assignedDataBtn) assignedDataBtn.classList.remove("hidden");
-        refreshContacts(); // Load Thursday Calling round data
+        refreshContacts(); // Load GIC Calling round data
       } else {
-        activeCampaign = "Festival Promotions";
+        activeCampaign = "Special Events";
         masterSection.classList.add("hidden");
         document.getElementById("calling-section").style.display = "none";
         if (adminFestivalSection) {
           adminFestivalSection.classList.remove("hidden");
-          loadAdminFestivalData(); // Load Festival Promotions data
+          loadAdminFestivalData(); // Load Special Events data
         }
         if (assignedDataBtn) assignedDataBtn.classList.add("hidden");
       }
     });
   });
 
-  phoneInput.addEventListener("input", () => {
-    phoneInput.value = phoneInput.value.replace(/\D/g, "").slice(0, 10);
-    loginError.textContent = "";
-  });
+  if (usernameInput) {
+    usernameInput.addEventListener("input", () => {
+      loginError.textContent = "";
+    });
+  }
+  if (passwordInput) {
+    passwordInput.addEventListener("input", () => {
+      loginError.textContent = "";
+    });
+  }
 
   // Auto-login if a user is remembered on this device
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
     try {
       const user = JSON.parse(saved);
-      if (user && user.phone) {
-        phoneInput.value = user.phone;
-        attemptLogin(user.phone, true);
+      if (user && user.loginId && user.phone) {
+        if (usernameInput) usernameInput.value = user.loginId;
+        if (passwordInput) passwordInput.value = user.phone;
+        attemptLogin(user.loginId, user.phone, true);
       }
     } catch (ignored) {
       localStorage.removeItem(STORAGE_KEY);
@@ -451,7 +459,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // Poster banner rendering — must be at module scope so renderContacts() can call it
 function renderPosterBanner() {
   if (!campaignPosterBanner || !campaignPosterImg) return;
-  const posterKey = activeCampaign === "Festival Promotions" ? "festival_poster" : "calling_poster";
+  const posterKey = activeCampaign === "Special Events" ? "festival_poster" : "calling_poster";
   const posterUrl = (settings && settings[posterKey]) || "";
   const showingCallingSection = document.getElementById("calling-section").style.display !== "none" && !mainContent.classList.contains("hidden");
 
@@ -538,19 +546,20 @@ function updateHeaderStats() {
 
 function onLoginSubmit(event) {
   event.preventDefault();
-  const phone = phoneInput.value.trim();
-  if (phone.length !== 10) {
-    loginError.textContent = "Please enter a valid 10-digit phone number.";
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value.trim();
+  if (!username || !password) {
+    loginError.textContent = "Please enter both User ID and Password.";
     return;
   }
-  attemptLogin(phone, false);
+  attemptLogin(username, password, false);
 }
 
-async function attemptLogin(phone, silent) {
+async function attemptLogin(username, password, silent) {
   setLoginBusy(true);
   loginError.textContent = "";
 
-  const data = await api({ action: "login", phone: phone });
+  const data = await api({ action: "login", username: username, password: password });
   setLoginBusy(false);
 
   if (data.status === "success" && data.user) {
@@ -583,7 +592,8 @@ function logout() {
   userNames = [];
   userLimits = {};
   dirtyContacts.clear();
-  phoneInput.value = "";
+  if (usernameInput) usernameInput.value = "";
+  if (passwordInput) passwordInput.value = "";
   loginError.textContent = "";
   masterContactsBody.innerHTML = "";
   contactsBody.innerHTML = "";
@@ -609,14 +619,20 @@ function showApp() {
 
   // Enable/disable dashboard campaign buttons based on role
   document.querySelectorAll(".dashboard-card").forEach(card => {
-    if (isAdmin() || card.dataset.campaign === "Festival Promotions") {
+    if (isAdmin() || card.dataset.campaign === "Special Events") {
       card.classList.remove("disabled");
     } else {
       card.classList.add("disabled");
     }
   });
 
-  // Both admins and regular users start at the campaign dashboard
+  // Admin directly sees GIC Calling (All People Data)
+  if (isAdmin()) {
+    selectCampaign("GIC Calling");
+    return;
+  }
+
+  // Regular users start at the campaign dashboard
   dashboardView.classList.remove("hidden");
   mainContent.classList.add("hidden");
   adminTabs.classList.add("hidden");
@@ -635,7 +651,7 @@ function selectCampaign(name, skipPushHistory) {
   const titleEl = document.getElementById("calling-page-title");
   if (titleEl) {
     let displayName = name;
-    if (name === "Festival Promotions" && !isAdmin() && currentUser && currentUser.festival) {
+    if (name === "Special Events" && !isAdmin() && currentUser && currentUser.festival) {
       displayName = currentUser.festival;
     }
     titleEl.innerHTML = displayName + ' <span id="active-date" class="active-date"></span>';
@@ -652,7 +668,7 @@ function selectCampaign(name, skipPushHistory) {
 
   dashboardView.classList.add("hidden");
   mainContent.classList.remove("hidden");
-  backToDashboardBtn.classList.toggle("hidden", isAdmin());
+  backToDashboardBtn.classList.remove("hidden"); // Show back button for all (including admins) so they can return to dashboard
 
   // Hide all campaign-specific sections
   masterSection.classList.add("hidden");
@@ -681,7 +697,7 @@ function selectCampaign(name, skipPushHistory) {
     return;
   }
 
-  if (name === "Cultivation") {
+  if (name === "Core Cultivation") {
     if (cultivationSection) {
       cultivationSection.classList.remove("hidden");
       loadCultivationContacts();
@@ -689,7 +705,7 @@ function selectCampaign(name, skipPushHistory) {
     return;
   }
 
-  // Standard calling campaigns (Thursday Calling / Festival Promotions)
+  // Standard calling campaigns (GIC Calling / Special Events)
   const isAdm = isAdmin();
   adminTabs.classList.toggle("hidden", !isAdm);
 
@@ -702,7 +718,7 @@ function selectCampaign(name, skipPushHistory) {
 
     document.querySelectorAll(".admin-tab").forEach(t => t.classList.remove("active"));
 
-    if (name === "Festival Promotions") {
+    if (name === "Special Events") {
       const festTab = document.querySelector('.admin-tab[data-target="admin-festival-section"]');
       if (festTab) festTab.classList.add("active");
 
@@ -1005,8 +1021,8 @@ function createContactRow(contact, isMasterTable, isCultivation) {
   controls.callsTd = callsTd;
   tr.appendChild(callsTd);
 
-  // 5.5 Event Column (Festival Promotions only, for calling round view)
-  if (activeCampaign === "Festival Promotions" && !isMasterTable && isAdmin()) {
+  // 5.5 Event Column (Special Events only, for calling round view)
+  if (activeCampaign === "Special Events" && !isMasterTable && isAdmin()) {
     const eventTd = document.createElement("td");
     eventTd.className = "cell-event";
     eventTd.dataset.label = "Event";
@@ -1246,7 +1262,7 @@ function createContactRow(contact, isMasterTable, isCultivation) {
       sendBtn.addEventListener("click", () => {
         callMade = true;
         gatedUpdateSubmitState();
-        const templateKey = activeCampaign === "Festival Promotions" ? "festival_message" : "calling_message";
+        const templateKey = activeCampaign === "Special Events" ? "festival_message" : "calling_message";
         let messageText = (settings && settings[templateKey]) || "";
         messageText = messageText.replace(/{name}/g, contact.name);
         const url = "https://wa.me/91" + contact.phone + (messageText ? "?text=" + encodeURIComponent(messageText) : "");
@@ -1298,7 +1314,7 @@ function updateStatsBar() {
 }
 
 // ============================================================
-// Thursday Calling — render
+// GIC Calling — render
 // ============================================================
 
 function renderContacts() {
@@ -1312,10 +1328,10 @@ function renderContacts() {
   const titleEl = document.getElementById("calling-page-title");
   if (titleEl) {
     let displayName = activeCampaign;
-    if (activeCampaign === "Festival Promotions" && !isAdmin() && currentUser && currentUser.festival) {
+    if (activeCampaign === "Special Events" && !isAdmin() && currentUser && currentUser.festival) {
       displayName = currentUser.festival;
     }
-    if (activeCampaign === "Festival Promotions") {
+    if (activeCampaign === "Special Events") {
       titleEl.innerHTML = displayName + ' <span id="active-date" class="active-date"></span>';
     } else {
       titleEl.innerHTML = displayName + ' <span id="active-date" class="active-date">' + (activeDate ? "for " + activeDate : "") + '</span>';
@@ -1335,13 +1351,13 @@ function renderContacts() {
     }
   }
 
-  // 2. Render Section 2: Thursday Calling (All Users)
+  // 2. Render Section 2: GIC Calling (All Users)
   contactsBody.innerHTML = "";
 
   // Header row setup (Assigned To column depends on Admin)
   contactsHead.innerHTML = "";
   const headers = ["Name", "Phone Number", "W/S", "Sessions", "No. of Calls"];
-  if (activeCampaign === "Festival Promotions" && isAdmin()) {
+  if (activeCampaign === "Special Events" && isAdmin()) {
     headers.push("Event");
   }
   if (isAdmin()) {
@@ -1465,7 +1481,7 @@ async function submitRow(contact, tr, controls, btn) {
 async function refreshContacts() {
   refreshBtn.classList.add("spinning");
 
-  if (activeCampaign === "Festival Promotions" && isAdmin()) {
+  if (activeCampaign === "Special Events" && isAdmin()) {
     await loadAdminFestivalData();
     refreshBtn.classList.remove("spinning");
     setSyncStatus("Up to date", "saved");
@@ -1475,8 +1491,8 @@ async function refreshContacts() {
   const data = await api({
     action: "data",
     phone: currentUser.phone,
-    sheet: activeCampaign === "Reception" || activeCampaign === "Cultivation" ? "Thursday Calling" : activeCampaign,
-    campaignType: activeCampaign === "Cultivation" ? "cultivation" : (activeCampaign === "Festival Promotions" ? "festival" : "calling"),
+    sheet: activeCampaign === "Reception" || activeCampaign === "Core Cultivation" ? "GIC Calling" : activeCampaign,
+    campaignType: activeCampaign === "Core Cultivation" ? "cultivation" : (activeCampaign === "Special Events" ? "festival" : "calling"),
     skipCache: "true"
   });
   refreshBtn.classList.remove("spinning");
@@ -2107,7 +2123,7 @@ async function markAttendance() {
 }
 
 // ============================================================
-// Cultivation — Load contacts where user is the cultivator
+// Core Cultivation — Load contacts where user is the cultivator
 // ============================================================
 
 async function loadCultivationContacts() {
@@ -2118,21 +2134,21 @@ async function loadCultivationContacts() {
   // Load cultivation contacts from both sheets
   const allContacts = [];
 
-  const data1 = await api({ action: "data", phone: currentUser.phone, sheet: "Thursday Calling", campaignType: "cultivation", skipCache: "true" });
+  const data1 = await api({ action: "data", phone: currentUser.phone, sheet: "GIC Calling", campaignType: "cultivation", skipCache: "true" });
   if (data1.status === "success" && data1.contacts) {
     data1.contacts.forEach(c => {
-      allContacts.push({ ...c, campaign: "Thursday Calling" });
+      allContacts.push({ ...c, campaign: "GIC Calling" });
     });
   }
 
-  const data2 = await api({ action: "data", phone: currentUser.phone, sheet: "Festival Promotions", campaignType: "cultivation", skipCache: "true" });
+  const data2 = await api({ action: "data", phone: currentUser.phone, sheet: "Special Events", campaignType: "cultivation", skipCache: "true" });
   if (data2.status === "success" && data2.contacts) {
     data2.contacts.forEach(c => {
-      allContacts.push({ ...c, campaign: "Festival Promotions" });
+      allContacts.push({ ...c, campaign: "Special Events" });
     });
   }
 
-  // Setup table header dynamically to match Thursday Calling
+  // Setup table header dynamically to match GIC Calling
   const cultivationHead = cultivationTable.querySelector("thead tr");
   if (cultivationHead) {
     cultivationHead.innerHTML = "";
@@ -2180,7 +2196,7 @@ function openAddPersonModal(context) {
   addPersonError.textContent = "";
 
   if (context === "admin") {
-    addPersonTitle.textContent = "Add Person to Thursday Calling";
+    addPersonTitle.textContent = "Add Person to GIC Calling";
     addPersonSubmitBtn.textContent = "Add Person";
   } else {
     addPersonTitle.textContent = "New Registration & Attendance";
@@ -2215,8 +2231,8 @@ async function submitAddPersonForm() {
       requesterPhone: currentUser.phone,
       phone: phone,
       name: name,
-      sheet: activeCampaign || "Thursday Calling",
-      event: (activeCampaign === "Festival Promotions" && typeof adminFestivalFilter !== "undefined" && adminFestivalFilter && adminFestivalFilter.value !== "ALL") ? adminFestivalFilter.value : ""
+      sheet: activeCampaign || "GIC Calling",
+      event: (activeCampaign === "Special Events" && typeof adminFestivalFilter !== "undefined" && adminFestivalFilter && adminFestivalFilter.value !== "ALL") ? adminFestivalFilter.value : ""
     });
 
     addPersonSubmitBtn.disabled = false;
@@ -2569,9 +2585,9 @@ async function submitImportData() {
   const response = await api(null, {
     action: "importContacts",
     requesterPhone: currentUser.phone,
-    sheet: activeCampaign || "Thursday Calling",
+    sheet: activeCampaign || "GIC Calling",
     contacts: parsedContacts,
-    event: (activeCampaign === "Festival Promotions" && typeof adminFestivalFilter !== "undefined" && adminFestivalFilter && adminFestivalFilter.value !== "ALL") ? adminFestivalFilter.value : ""
+    event: (activeCampaign === "Special Events" && typeof adminFestivalFilter !== "undefined" && adminFestivalFilter && adminFestivalFilter.value !== "ALL") ? adminFestivalFilter.value : ""
   });
 
   importMappingSubmit.disabled = false;
@@ -2594,7 +2610,7 @@ async function submitImportData() {
 }
 
 // ============================================================
-// Festival Promotions (Admin Only)
+// Special Events (Admin Only)
 // ============================================================
 
 let loadedFestivals = [];
@@ -2614,7 +2630,7 @@ async function loadAdminFestivalData() {
   const response = await api({
     action: "data",
     phone: currentUser.phone,
-    sheet: "Festival Promotions",
+    sheet: "Special Events",
     campaignType: "festival"
   });
 
@@ -2673,10 +2689,15 @@ function populateAutoAssignUsers(allUsers, selectedUsers, selectedUserFestivals)
     userLbl.textContent = "Caller Name";
     userLbl.style.flex = "1";
 
-    const limitLbl = document.createElement("span");
-    limitLbl.textContent = "Call Limit";
-    limitLbl.style.width = "65px";
-    limitLbl.style.textAlign = "center";
+    const tcLimitLbl = document.createElement("span");
+    tcLimitLbl.textContent = "GIC Limit";
+    tcLimitLbl.style.width = "65px";
+    tcLimitLbl.style.textAlign = "center";
+
+    const fpLimitLbl = document.createElement("span");
+    fpLimitLbl.textContent = "SE Limit";
+    fpLimitLbl.style.width = "65px";
+    fpLimitLbl.style.textAlign = "center";
 
     const filterLbl = document.createElement("span");
     filterLbl.textContent = "Festival Filter";
@@ -2684,7 +2705,8 @@ function populateAutoAssignUsers(allUsers, selectedUsers, selectedUserFestivals)
     filterLbl.style.textAlign = "right";
 
     headerDiv.appendChild(userLbl);
-    headerDiv.appendChild(limitLbl);
+    headerDiv.appendChild(tcLimitLbl);
+    headerDiv.appendChild(fpLimitLbl);
     headerDiv.appendChild(filterLbl);
     autoAssignUsersList.appendChild(headerDiv);
   }
@@ -2753,35 +2775,38 @@ function populateAutoAssignUsers(allUsers, selectedUsers, selectedUserFestivals)
     countsSub.style.fontWeight = "500";
     const tcCount = allTCAssigned[u] || 0;
     const fpCount = allFPAssigned[u] || 0;
-    countsSub.textContent = `📞 TC: ${tcCount} | 🦚 Fest: ${fpCount}`;
+    countsSub.textContent = `📞 GIC: ${tcCount} | 🦚 Fest: ${fpCount}`;
     label.appendChild(countsSub);
 
     rowDiv.appendChild(label);
 
-    // Call Limit Input Box
-    const limitInput = document.createElement("input");
-    limitInput.type = "number";
-    limitInput.className = "status-select";
-    limitInput.style.width = "65px";
-    limitInput.style.padding = "4px 8px";
-    limitInput.style.fontSize = "12px";
-    limitInput.style.margin = "0";
-    limitInput.placeholder = "No Limit";
-    limitInput.value = userFestLimits[u] !== undefined ? userFestLimits[u] : "";
+    // 1. Thursday Call Limit Input Box (TC)
+    const tcLimitInput = document.createElement("input");
+    tcLimitInput.type = "number";
+    tcLimitInput.className = "status-select";
+    tcLimitInput.style.width = "65px";
+    tcLimitInput.style.padding = "4px 8px";
+    tcLimitInput.style.fontSize = "12px";
+    tcLimitInput.style.margin = "0";
+    tcLimitInput.placeholder = "No Limit";
+    tcLimitInput.value = userLimits[u] !== undefined ? userLimits[u] : "";
 
-    limitInput.addEventListener("change", async () => {
-      limitInput.disabled = true;
-      const newLimit = limitInput.value.trim();
+    tcLimitInput.addEventListener("change", async () => {
+      tcLimitInput.disabled = true;
+      const newLimit = tcLimitInput.value.trim();
       const response = await api(null, {
         action: "updateUserLimit",
         requesterPhone: currentUser.phone,
         username: u,
         limit: newLimit === "" ? "" : parseInt(newLimit, 10),
-        campaignType: "festival"
+        campaignType: "calling"
       });
-      limitInput.disabled = false;
+      tcLimitInput.disabled = false;
       if (response.status === "success") {
-        showToast(`Festival limit for ${u} updated to: ${newLimit || "No Limit"}`, "success");
+        showToast(`GIC limit for ${u} updated to: ${newLimit || "No Limit"}`, "success");
+        if (response.userLimits) {
+          userLimits = response.userLimits;
+        }
         if (response.userFestLimits) {
           userFestLimits = response.userFestLimits;
         }
@@ -2791,12 +2816,54 @@ function populateAutoAssignUsers(allUsers, selectedUsers, selectedUserFestivals)
         populateAutoAssignUsers(userNames, freshSelected, response.autoAssignUserFestivals || {});
         renderAdminFestivalContacts();
       } else {
-        showToast("Error updating limit: " + response.message, "error");
-        limitInput.value = userFestLimits[u] !== undefined ? userFestLimits[u] : "";
+        showToast("Error updating GIC limit: " + response.message, "error");
+        tcLimitInput.value = userLimits[u] !== undefined ? userLimits[u] : "";
       }
     });
 
-    rowDiv.appendChild(limitInput);
+    // 2. Festival Call Limit Input Box (FP)
+    const fpLimitInput = document.createElement("input");
+    fpLimitInput.type = "number";
+    fpLimitInput.className = "status-select";
+    fpLimitInput.style.width = "65px";
+    fpLimitInput.style.padding = "4px 8px";
+    fpLimitInput.style.fontSize = "12px";
+    fpLimitInput.style.margin = "0";
+    fpLimitInput.placeholder = "No Limit";
+    fpLimitInput.value = userFestLimits[u] !== undefined ? userFestLimits[u] : "";
+
+    fpLimitInput.addEventListener("change", async () => {
+      fpLimitInput.disabled = true;
+      const newLimit = fpLimitInput.value.trim();
+      const response = await api(null, {
+        action: "updateUserLimit",
+        requesterPhone: currentUser.phone,
+        username: u,
+        limit: newLimit === "" ? "" : parseInt(newLimit, 10),
+        campaignType: "festival"
+      });
+      fpLimitInput.disabled = false;
+      if (response.status === "success") {
+        showToast(`Festival limit for ${u} updated to: ${newLimit || "No Limit"}`, "success");
+        if (response.userLimits) {
+          userLimits = response.userLimits;
+        }
+        if (response.userFestLimits) {
+          userFestLimits = response.userFestLimits;
+        }
+        if (response.contacts) contacts = response.contacts;
+        if (response.userNames) userNames = response.userNames;
+        const freshSelected = response.autoAssignUsers || [];
+        populateAutoAssignUsers(userNames, freshSelected, response.autoAssignUserFestivals || {});
+        renderAdminFestivalContacts();
+      } else {
+        showToast("Error updating Festival limit: " + response.message, "error");
+        fpLimitInput.value = userFestLimits[u] !== undefined ? userFestLimits[u] : "";
+      }
+    });
+
+    rowDiv.appendChild(tcLimitInput);
+    rowDiv.appendChild(fpLimitInput);
 
     // Right select dropdown for festival assignment
     const select = document.createElement("select");
@@ -3047,7 +3114,7 @@ function renderAdminFestivalContacts() {
       const res = await api(null, {
         action: "updateContact",
         requesterPhone: currentUser.phone,
-        sheet: "Festival Promotions",
+        sheet: "Special Events",
         phone: contact.phone,
         updates: {
           ws: wsSelect.value,
@@ -3094,8 +3161,8 @@ function startBackgroundPolling() {
     const response = await api({
       action: "data",
       phone: currentUser.phone,
-      sheet: activeCampaign === "Reception" || activeCampaign === "Cultivation" ? "Thursday Calling" : activeCampaign,
-      campaignType: activeCampaign === "Cultivation" ? "cultivation" : (activeCampaign === "Festival Promotions" ? "festival" : "calling"),
+      sheet: activeCampaign === "Reception" || activeCampaign === "Core Cultivation" ? "GIC Calling" : activeCampaign,
+      campaignType: activeCampaign === "Core Cultivation" ? "cultivation" : (activeCampaign === "Special Events" ? "festival" : "calling"),
       skipCache: true
     });
 
@@ -3110,12 +3177,12 @@ function startBackgroundPolling() {
         userNames = response.userNames || [];
         loadedFestivals = response.festivals || [];
 
-        if (activeCampaign === "Festival Promotions" && isAdmin()) {
+        if (activeCampaign === "Special Events" && isAdmin()) {
           const currentFilter = adminFestivalFilter ? adminFestivalFilter.value : "ALL";
           populateFestivalFilter();
           if (adminFestivalFilter) adminFestivalFilter.value = currentFilter;
           renderAdminFestivalContacts();
-        } else if (activeCampaign === "Cultivation") {
+        } else if (activeCampaign === "Core Cultivation") {
           loadCultivationContacts();
         } else if (activeCampaign !== "Reception") {
           renderContacts();

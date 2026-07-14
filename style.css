@@ -108,6 +108,33 @@ body {
   background: #faf9f6;
 }
 
+.login-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  margin-bottom: 12px;
+}
+
+.login-input-wrap:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.12);
+}
+
+.login-input-wrap input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 15px 14px;
+  font-size: 16px;
+  font-family: var(--font);
+  color: var(--text);
+  background: transparent;
+}
+
 #phone-input {
   flex: 1;
   border: none;
